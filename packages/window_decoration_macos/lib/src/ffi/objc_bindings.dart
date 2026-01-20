@@ -31,6 +31,15 @@ final class NSRect extends Struct {
   external double height;
 }
 
+/// NSSize structure for macOS window sizes
+final class NSSize extends Struct {
+  @Double()
+  external double width;
+
+  @Double()
+  external double height;
+}
+
 /// Objective-C Runtime FFI bindings for macOS window manipulation
 class ObjCBindings {
   ObjCBindings._();
@@ -211,6 +220,33 @@ class ObjCBindings {
           bool,
         )
       >('objc_msgSend');
+
+  /// Send a message that takes an NSSize parameter (for setMinSize:, setMaxSize:)
+  static final void Function(
+    ObjCObjectPointer,
+    ObjCSelectorPointer,
+    Pointer<NSSize>,
+  )
+  objc_msgSend_void_size = _objc
+      .lookupFunction<
+        Void Function(ObjCObjectPointer, ObjCSelectorPointer, Pointer<NSSize>),
+        void Function(ObjCObjectPointer, ObjCSelectorPointer, Pointer<NSSize>)
+      >('objc_msgSend');
+
+  /// Send a message that returns an NSSize struct (for minSize, maxSize getters)
+  /// On arm64 (Apple Silicon), structs are returned in registers
+  static NSSize objc_msgSend_stret_nssize(
+    ObjCObjectPointer obj,
+    ObjCSelectorPointer sel,
+  ) {
+    final getSize = _objc
+        .lookupFunction<
+          NSSize Function(ObjCObjectPointer, ObjCSelectorPointer),
+          NSSize Function(ObjCObjectPointer, ObjCSelectorPointer)
+        >('objc_msgSend');
+
+    return getSize(obj, sel);
+  }
 
   // ==========================================================================
   // Helper Functions

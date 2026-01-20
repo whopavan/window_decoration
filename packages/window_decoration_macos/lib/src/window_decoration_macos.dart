@@ -194,7 +194,10 @@ class WindowDecorationMacOS extends WindowDecorationPlatform {
   }
 
   @override
-  Future<void> setTitleBarStyle(TitleBarStyle style, {int captionHeight = 32}) async {
+  Future<void> setTitleBarStyle(
+    TitleBarStyle style, {
+    int captionHeight = 32,
+  }) async {
     _checkInitialized();
 
     switch (style) {
@@ -207,9 +210,16 @@ class WindowDecorationMacOS extends WindowDecorationPlatform {
       case TitleBarStyle.unified:
         await _setUnifiedTitleBar();
       case TitleBarStyle.customFrame:
-        // On macOS, customFrame behaves like transparent (full size content view)
-        // The captionHeight parameter is not used on macOS - the app draws its own title bar
+        // On macOS, customFrame gives full control to the app
+        // Make title bar transparent with full size content view, hide title and traffic lights
         await _setTitleBarTransparent();
+        final setTitleVisibilitySel = ObjCBindings.sel('setTitleVisibility:');
+        ObjCBindings.objc_msgSend_void_int(
+          _nsWindow,
+          setTitleVisibilitySel,
+          NSWindowTitleVisibility.hidden,
+        );
+        _setWindowButtonsHidden(true);
     }
   }
 
@@ -281,14 +291,18 @@ class WindowDecorationMacOS extends WindowDecorationPlatform {
       true,
     );
 
-    // Enable full size content view
+    // Enable full size content view while preserving resizable and other flags
     final getStyleMaskSel = ObjCBindings.sel('styleMask');
     final currentStyle = ObjCBindings.objc_msgSend_int(
       _nsWindow,
       getStyleMaskSel,
     );
 
-    final newStyle = currentStyle | NSWindowStyleMask.fullSizeContentView;
+    // Ensure resizable flag is set along with fullSizeContentView
+    final newStyle =
+        currentStyle |
+        NSWindowStyleMask.fullSizeContentView |
+        NSWindowStyleMask.resizable;
 
     final setStyleMaskSel = ObjCBindings.sel('setStyleMask:');
     ObjCBindings.objc_msgSend_void_int(_nsWindow, setStyleMaskSel, newStyle);

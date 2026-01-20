@@ -183,7 +183,6 @@ class WindowDecorationLinux extends WindowDecorationPlatform {
         GtkBindings.windowSetDecorated(_gtkWindow, decorated: true);
       case TitleBarStyle.customFrame:
         // On Linux, customFrame behaves like hidden (client-side decorations)
-        // The captionHeight parameter is not used on Linux
         GtkBindings.windowSetDecorated(_gtkWindow, decorated: false);
     }
   }

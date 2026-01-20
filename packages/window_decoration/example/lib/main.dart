@@ -168,8 +168,9 @@ class _DemoHomePageState extends State<DemoHomePage> {
   Future<void> _setTitleBarStyle(TitleBarStyle style) async {
     try {
       // For customFrame style, use custom caption height
-      final captionHeight =
-          style == TitleBarStyle.customFrame ? kTitleBarHeight.toInt() : 32;
+      final captionHeight = style == TitleBarStyle.customFrame
+          ? kTitleBarHeight.toInt()
+          : 32;
       await service.setTitleBarStyle(style, captionHeight: captionHeight);
 
       // On Windows, set up caption button zones for snap layout support
@@ -586,29 +587,19 @@ class _DemoHomePageState extends State<DemoHomePage> {
         decoration: BoxDecoration(
           color: Colors.grey.shade900,
           border: Border(
-            bottom: BorderSide(
-              color: Colors.grey.shade800,
-              width: 1,
-            ),
+            bottom: BorderSide(color: Colors.grey.shade800, width: 1),
           ),
         ),
         child: Row(
           children: [
             // App icon and title
             const SizedBox(width: 16),
-            Icon(
-              Icons.window,
-              color: Colors.blue.shade400,
-              size: 20,
-            ),
+            Icon(Icons.window, color: Colors.blue.shade400, size: 20),
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
                 'Window Decoration Demo - Custom Title Bar',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -666,8 +657,9 @@ class _DemoHomePageState extends State<DemoHomePage> {
       onPressed: () => _setBackgroundColor(color),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
-        foregroundColor:
-            color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+        foregroundColor: color.computeLuminance() > 0.5
+            ? Colors.black
+            : Colors.white,
         side: isSelected
             ? const BorderSide(color: Colors.white, width: 3)
             : null,
@@ -729,12 +721,16 @@ class _WindowButtonState extends State<_WindowButton> {
             width: _DemoHomePageState.kButtonWidth,
             height: _DemoHomePageState.kTitleBarHeight,
             color: _isHovered
-                ? (widget.isClose ? Colors.red : Colors.white.withValues(alpha: 0.1))
+                ? (widget.isClose
+                      ? Colors.red
+                      : Colors.white.withValues(alpha: 0.1))
                 : Colors.transparent,
             child: Icon(
               widget.icon,
               size: 16,
-              color: _isHovered && widget.isClose ? Colors.white : Colors.grey.shade400,
+              color: _isHovered && widget.isClose
+                  ? Colors.white
+                  : Colors.grey.shade400,
             ),
           ),
         ),
