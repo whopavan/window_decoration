@@ -129,6 +129,12 @@ class _DecoratedWindowState extends State<DecoratedWindow> {
   }
 
   @override
+  void dispose() {
+    _service.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) =>
       // Simply wrap the child with RegularWindow
       // The decoration configuration is applied via the service

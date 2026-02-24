@@ -1,5 +1,7 @@
 // ignore_for_file: implementation_imports, invalid_use_of_internal_member
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/_window.dart';
@@ -166,9 +168,17 @@ class WindowDecorationService {
     maxHeight: maxHeight,
   );
 
+  /// A stream that emits [WindowState] events when the window state changes
+  /// (maximized, minimized, restored).
+  Stream<WindowState> get onWindowStateChanged =>
+      _platform.onWindowStateChanged;
+
   /// Shows the window (convenience method for setVisible(visible: true))
   Future<void> show() => setVisible(visible: true);
 
   /// Hides the window (convenience method for setVisible(visible: false))
   Future<void> hide() => setVisible(visible: false);
+
+  /// Releases resources held by this service and the underlying platform.
+  void dispose() => _platform.dispose();
 }

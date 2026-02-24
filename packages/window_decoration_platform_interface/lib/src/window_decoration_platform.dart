@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'package:window_decoration_platform_interface/src/models/title_bar_style.dart';
 import 'package:window_decoration_platform_interface/src/models/window_bounds.dart';
+import 'package:window_decoration_platform_interface/src/models/window_state.dart';
 import 'package:window_decoration_platform_interface/src/platform_stub.dart'
     if (dart.library.io) 'package:window_decoration_platform_interface/src/platform_io.dart';
 import 'package:window_decoration_platform_interface/src/ffi_stub.dart'
@@ -136,4 +139,16 @@ abstract class WindowDecorationPlatform extends PlatformInterface {
     // Default implementation: no-op
     // Platforms that support native constraints should override this
   }
+
+  /// A stream that emits [WindowState] events when the window state changes
+  /// (maximized, minimized, restored).
+  ///
+  /// The default implementation returns an empty stream.
+  /// Platforms that support window state monitoring should override this.
+  Stream<WindowState> get onWindowStateChanged => const Stream.empty();
+
+  /// Releases resources held by this platform implementation.
+  ///
+  /// The default implementation is a no-op.
+  void dispose() {}
 }

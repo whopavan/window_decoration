@@ -68,6 +68,8 @@ class _DemoHomePageState extends State<DemoHomePage> {
   TitleBarStyle titleBarStyle = TitleBarStyle.customFrame;
   Color backgroundColor = Colors.black;
   WindowBounds? currentBounds;
+  WindowState? currentWindowState;
+  StreamSubscription<WindowState>? _windowStateSubscription;
 
   // Custom title bar height
   static const double kTitleBarHeight = 48.0;
@@ -83,7 +85,24 @@ class _DemoHomePageState extends State<DemoHomePage> {
       if (Platform.isWindows && titleBarStyle == TitleBarStyle.customFrame) {
         _updateCaptionButtonZones();
       }
+      _subscribeToWindowState();
     });
+  }
+
+  void _subscribeToWindowState() {
+    _windowStateSubscription = service.onWindowStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        currentWindowState = state;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _windowStateSubscription?.cancel();
+    service.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCurrentBounds() async {
@@ -342,6 +361,30 @@ class _DemoHomePageState extends State<DemoHomePage> {
                             style: const TextStyle(fontSize: 14),
                           ),
                         ),
+                        if (currentWindowState != null) ...[
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: switch (currentWindowState!) {
+                                WindowState.maximized => Colors.green.shade800,
+                                WindowState.minimized => Colors.orange.shade800,
+                                WindowState.restored => Colors.blue.shade800,
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              currentWindowState!.name,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
@@ -14,6 +15,19 @@ class WindowDecorationWindows extends WindowDecorationPlatform {
 
   /// Whether the platform has been initialized
   bool _isInitialized = false;
+
+  /// Stream controller for window state changes
+  final StreamController<WindowState> _windowStateController =
+      StreamController<WindowState>.broadcast();
+
+  /// NativeCallable for receiving window state callbacks from C++
+  NativeCallable<Void Function(Int32)>? _stateCallable;
+
+  /// Track the last reported state for deduplication
+  WindowState? _lastReportedState;
+
+  /// Whether the native callback has been registered
+  bool _callbackRegistered = false;
 
   /// Registers this class as the default instance of [WindowDecorationPlatform]
   static void registerWith() {
@@ -612,6 +626,49 @@ class WindowDecorationWindows extends WindowDecorationPlatform {
     } finally {
       calloc.free(corners);
     }
+  }
+
+  // ==========================================================================
+  // Window State Monitoring
+  // ==========================================================================
+
+  void _onNativeWindowStateChanged(int nativeValue) {
+    final state = WindowState.fromNativeValue(nativeValue);
+    if (state == null) return;
+    if (state == _lastReportedState) return;
+    _lastReportedState = state;
+    _windowStateController.add(state);
+  }
+
+  void _ensureCallbackRegistered() {
+    if (_callbackRegistered) return;
+    _checkInitialized();
+
+    _stateCallable = NativeCallable<Void Function(Int32)>.listener(
+      _onNativeWindowStateChanged,
+    );
+    Win32Bindings.registerWindowStateCallback(
+      _hwnd,
+      _stateCallable!.nativeFunction,
+    );
+    _callbackRegistered = true;
+  }
+
+  @override
+  Stream<WindowState> get onWindowStateChanged {
+    _ensureCallbackRegistered();
+    return _windowStateController.stream;
+  }
+
+  @override
+  void dispose() {
+    if (_callbackRegistered) {
+      Win32Bindings.unregisterWindowStateCallback(_hwnd);
+      _callbackRegistered = false;
+    }
+    _stateCallable?.close();
+    _stateCallable = null;
+    _windowStateController.close();
   }
 
   // ==========================================================================

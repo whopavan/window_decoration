@@ -552,6 +552,42 @@ class Win32Bindings {
     setConstraintsFunc(hwnd, minWidth, minHeight, maxWidth, maxHeight);
   }
 
+  /// Register a callback for window state changes (maximized, minimized, restored).
+  /// The callback receives an int32 matching Win32 SIZE_* constants:
+  /// 0 = SIZE_RESTORED, 1 = SIZE_MINIMIZED, 2 = SIZE_MAXIMIZED
+  static void registerWindowStateCallback(
+    int hwnd,
+    Pointer<NativeFunction<Void Function(Int32)>> callback,
+  ) {
+    if (_pluginLib == null) {
+      if (!tryAutoInitializePlugin()) {
+        throw StateError('Native plugin not loaded.');
+      }
+    }
+
+    final registerFunc = _pluginLib!.lookupFunction<
+        Void Function(IntPtr hwnd, Pointer<NativeFunction<Void Function(Int32)>> callback),
+        void Function(int hwnd, Pointer<NativeFunction<Void Function(Int32)>> callback)>(
+        'RegisterWindowStateCallback');
+
+    registerFunc(hwnd, callback);
+  }
+
+  /// Unregister the window state callback
+  static void unregisterWindowStateCallback(int hwnd) {
+    if (_pluginLib == null) {
+      if (!tryAutoInitializePlugin()) {
+        throw StateError('Native plugin not loaded.');
+      }
+    }
+
+    final unregisterFunc = _pluginLib!.lookupFunction<
+        Void Function(IntPtr hwnd),
+        void Function(int hwnd)>('UnregisterWindowStateCallback');
+
+    unregisterFunc(hwnd);
+  }
+
   /// Get the resize border width in pixels
   static int getResizeBorderWidth() {
     if (_pluginLib == null) {

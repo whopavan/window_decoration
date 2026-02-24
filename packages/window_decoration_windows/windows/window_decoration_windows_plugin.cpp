@@ -13,6 +13,9 @@
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "comctl32.lib")
 
+// Callback type for window state changes (maximized, minimized, restored)
+typedef void (*WindowStateCallback)(int32_t state);
+
 // Frame mode determines how the window frame is handled
 enum class FrameMode {
     Normal,      // Standard Windows frame with title bar
@@ -58,6 +61,9 @@ struct WindowState {
     int maxWidth;
     int maxHeight;
     bool hasConstraints;
+
+    // Window state change callback (for Dart FFI)
+    WindowStateCallback stateCallback;
 };
 
 // Global state for multi-window support
@@ -458,6 +464,17 @@ LRESULT CALLBACK CustomFrameWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         return result;
     }
 
+    // WM_SIZE - Notify Dart of window state changes (maximized, minimized, restored)
+    if (uMsg == WM_SIZE) {
+        if (state.stateCallback) {
+            int32_t sizeType = static_cast<int32_t>(wParam);
+            if (sizeType == SIZE_RESTORED || sizeType == SIZE_MINIMIZED || sizeType == SIZE_MAXIMIZED) {
+                state.stateCallback(sizeType);
+            }
+        }
+        // Fall through to original WndProc — do NOT return
+    }
+
     if (state.frameMode == FrameMode::CustomFrame) {
         // WM_NCCALCSIZE - This is the key to Windows 11 File Explorer style
         // We adjust the client area to remove the title bar while keeping borders
@@ -778,6 +795,9 @@ extern "C" __declspec(dllexport) bool IsCustomFrameEnabled(HWND hwnd) {
 extern "C" __declspec(dllexport) void RestoreWindowProc(HWND hwnd) {
     auto it = g_window_states.find(hwnd);
     if (it != g_window_states.end()) {
+        // Clear callback before restoring
+        it->second.stateCallback = nullptr;
+
         if (it->second.originalWndProc != nullptr) {
             SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(it->second.originalWndProc));
         }
@@ -823,6 +843,38 @@ extern "C" __declspec(dllexport) void StartDrag(HWND hwnd) {
 // Get the resize border width
 extern "C" __declspec(dllexport) int GetResizeBorderWidth() {
     return RESIZE_BORDER_WIDTH;
+}
+
+// Register a callback for window state changes (maximized, minimized, restored)
+// If the window is not yet managed, creates a WindowState and subclasses the WndProc.
+extern "C" __declspec(dllexport) void RegisterWindowStateCallback(HWND hwnd, WindowStateCallback callback) {
+    auto it = g_window_states.find(hwnd);
+
+    if (it == g_window_states.end()) {
+        // Window not managed yet - create a state and subclass the WndProc
+        WindowState state = {};
+        state.frameMode = FrameMode::Normal;
+        state.captionHeight = 0;
+        state.hasCaptionButtons = false;
+        state.hasConstraints = false;
+        state.stateCallback = callback;
+
+        state.originalWndProc = reinterpret_cast<WNDPROC>(
+            SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(CustomFrameWndProc))
+        );
+
+        g_window_states[hwnd] = state;
+    } else {
+        it->second.stateCallback = callback;
+    }
+}
+
+// Unregister the window state callback (sets it to null)
+extern "C" __declspec(dllexport) void UnregisterWindowStateCallback(HWND hwnd) {
+    auto it = g_window_states.find(hwnd);
+    if (it != g_window_states.end()) {
+        it->second.stateCallback = nullptr;
+    }
 }
 
 // Check if Windows 11
