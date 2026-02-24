@@ -104,6 +104,17 @@ class _DecoratedWindowState extends State<DecoratedWindow> {
         captionHeight: config.captionHeight,
       );
 
+      // Apply size constraints
+      if (config.sizeConstraints != null) {
+        final constraints = config.sizeConstraints!;
+        await _service.setSizeConstraints(
+          minWidth: constraints.minWidth,
+          minHeight: constraints.minHeight,
+          maxWidth: constraints.maxWidth.isFinite ? constraints.maxWidth : 0,
+          maxHeight: constraints.maxHeight.isFinite ? constraints.maxHeight : 0,
+        );
+      }
+
       // Apply visibility
       await _service.setVisible(visible: config.visible);
 

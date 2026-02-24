@@ -530,6 +530,28 @@ class Win32Bindings {
     startDragFunc(hwnd);
   }
 
+  /// Set window size constraints (in logical pixels, 0 = no constraint)
+  /// These are enforced natively via WM_GETMINMAXINFO
+  static void setSizeConstraints(
+    int hwnd, {
+    required int minWidth,
+    required int minHeight,
+    required int maxWidth,
+    required int maxHeight,
+  }) {
+    if (_pluginLib == null) {
+      if (!tryAutoInitializePlugin()) {
+        throw StateError('Native plugin not loaded.');
+      }
+    }
+
+    final setConstraintsFunc = _pluginLib!.lookupFunction<
+        Void Function(IntPtr hwnd, Int32 minWidth, Int32 minHeight, Int32 maxWidth, Int32 maxHeight),
+        void Function(int hwnd, int minWidth, int minHeight, int maxWidth, int maxHeight)>('SetSizeConstraints');
+
+    setConstraintsFunc(hwnd, minWidth, minHeight, maxWidth, maxHeight);
+  }
+
   /// Get the resize border width in pixels
   static int getResizeBorderWidth() {
     if (_pluginLib == null) {

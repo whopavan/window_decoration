@@ -14,13 +14,20 @@ void main() {
   // Create RegularWindowController
   final controller = RegularWindowController(
     preferredSize: const Size(900, 700),
+    preferredConstraints: BoxConstraints(minWidth: 800, minHeight: 600),
     title: 'Window Decoration Demo',
   );
 
-  // Run the app with RegularWindow
+  // Run the app with DecoratedWindow using custom frame
   runWidget(
-    RegularWindow(
+    DecoratedWindow(
       controller: controller,
+      config: const WindowDecorationConfig(
+        titleBarStyle: TitleBarStyle.customFrame,
+        captionHeight: 48,
+        centered: true,
+        sizeConstraints: BoxConstraints(minWidth: 800, minHeight: 600),
+      ),
       child: WindowDecorationDemoApp(controller: controller),
     ),
   );
@@ -58,7 +65,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
   bool alwaysOnTop = false;
   bool skipTaskbar = false;
   bool fullScreen = false;
-  TitleBarStyle titleBarStyle = TitleBarStyle.normal;
+  TitleBarStyle titleBarStyle = TitleBarStyle.customFrame;
   Color backgroundColor = Colors.black;
   WindowBounds? currentBounds;
 
@@ -70,8 +77,13 @@ class _DemoHomePageState extends State<DemoHomePage> {
   void initState() {
     super.initState();
     service = WindowDecorationService(widget.controller);
-    // Load initial window bounds
-    _loadCurrentBounds();
+    // Load initial window bounds and set up caption button zones
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCurrentBounds();
+      if (Platform.isWindows && titleBarStyle == TitleBarStyle.customFrame) {
+        _updateCaptionButtonZones();
+      }
+    });
   }
 
   Future<void> _loadCurrentBounds() async {

@@ -17,6 +17,7 @@ class WindowDecorationConfig {
     this.titleBarStyle = TitleBarStyle.normal,
     this.captionHeight = 32,
     this.effects = const [],
+    this.sizeConstraints,
   });
 
   /// Whether to center the window on screen on initialization
@@ -52,6 +53,13 @@ class WindowDecorationConfig {
   /// Visual effects to apply to the window
   final List<WindowEffect> effects;
 
+  /// Native window size constraints.
+  ///
+  /// When set, these constraints are enforced at the OS level, preventing
+  /// the window from being resized beyond the specified bounds.
+  /// This is separate from Flutter's [BoxConstraints] which only affects layout.
+  final BoxConstraints? sizeConstraints;
+
   /// Default configuration with standard window appearance
   static const WindowDecorationConfig defaultConfig = WindowDecorationConfig();
 
@@ -66,6 +74,7 @@ class WindowDecorationConfig {
     TitleBarStyle? titleBarStyle,
     int? captionHeight,
     List<WindowEffect>? effects,
+    BoxConstraints? sizeConstraints,
   }) => WindowDecorationConfig(
     centered: centered ?? this.centered,
     alwaysOnTop: alwaysOnTop ?? this.alwaysOnTop,
@@ -77,5 +86,6 @@ class WindowDecorationConfig {
     titleBarStyle: titleBarStyle ?? this.titleBarStyle,
     captionHeight: captionHeight ?? this.captionHeight,
     effects: effects ?? this.effects,
+    sizeConstraints: sizeConstraints ?? this.sizeConstraints,
   );
 }

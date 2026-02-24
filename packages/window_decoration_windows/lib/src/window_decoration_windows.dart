@@ -324,6 +324,24 @@ class WindowDecorationWindows extends WindowDecorationPlatform {
     Win32Bindings.showWindow(_hwnd, showCmd);
   }
 
+  @override
+  Future<void> setSizeConstraints({
+    double minWidth = 0,
+    double minHeight = 0,
+    double maxWidth = 0,
+    double maxHeight = 0,
+  }) async {
+    _checkInitialized();
+
+    Win32Bindings.setSizeConstraints(
+      _hwnd,
+      minWidth: minWidth.toInt(),
+      minHeight: minHeight.toInt(),
+      maxWidth: maxWidth.toInt(),
+      maxHeight: maxHeight.toInt(),
+    );
+  }
+
   void _restoreStandardTitleBar() {
     // Disable custom frame handling first (if it was enabled)
     // This restores normal WM_NCCALCSIZE behavior

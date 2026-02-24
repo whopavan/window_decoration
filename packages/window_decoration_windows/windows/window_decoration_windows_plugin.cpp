@@ -51,6 +51,13 @@ struct WindowState {
 
     // Whether caption buttons are defined
     bool hasCaptionButtons;
+
+    // Size constraints (in logical pixels, 0 = no constraint)
+    int minWidth;
+    int minHeight;
+    int maxWidth;
+    int maxHeight;
+    bool hasConstraints;
 };
 
 // Global state for multi-window support
@@ -397,6 +404,60 @@ LRESULT CALLBACK CustomFrameWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
     WindowState& state = it->second;
 
+    // WM_GETMINMAXINFO - Handle size constraints for ALL frame modes
+    if (uMsg == WM_GETMINMAXINFO) {
+        // First, let the original WndProc (Flutter) set its constraints
+        LRESULT result = 0;
+        if (state.originalWndProc) {
+            result = CallWindowProc(state.originalWndProc, hWnd, uMsg, wParam, lParam);
+        }
+
+        MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
+
+        // Apply size constraints (in logical pixels, scaled to physical)
+        if (state.hasConstraints) {
+            UINT dpi = GetDpiForWindowSafe(hWnd);
+            if (state.minWidth > 0) {
+                int px = MulDiv(state.minWidth, dpi, 96);
+                if (mmi->ptMinTrackSize.x < px) mmi->ptMinTrackSize.x = px;
+            }
+            if (state.minHeight > 0) {
+                int px = MulDiv(state.minHeight, dpi, 96);
+                if (mmi->ptMinTrackSize.y < px) mmi->ptMinTrackSize.y = px;
+            }
+            if (state.maxWidth > 0) {
+                int px = MulDiv(state.maxWidth, dpi, 96);
+                mmi->ptMaxTrackSize.x = px;
+            }
+            if (state.maxHeight > 0) {
+                int px = MulDiv(state.maxHeight, dpi, 96);
+                mmi->ptMaxTrackSize.y = px;
+            }
+        }
+
+        // Custom frame specific: adjust maximized window bounds
+        if (state.frameMode == FrameMode::CustomFrame) {
+            HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+            MONITORINFO mi = { sizeof(mi) };
+            if (GetMonitorInfo(monitor, &mi)) {
+                UINT dpi = GetDpiForWindowSafe(hWnd);
+                int frameY = GetSystemMetricsForDpiSafe(SM_CYFRAME, dpi);
+                int padding = GetSystemMetricsForDpiSafe(SM_CXPADDEDBORDER, dpi);
+                int borderY = frameY + padding;
+
+                int workWidth = mi.rcWork.right - mi.rcWork.left;
+                int workHeight = mi.rcWork.bottom - mi.rcWork.top;
+
+                mmi->ptMaxPosition.x = mi.rcWork.left - mi.rcMonitor.left;
+                mmi->ptMaxPosition.y = mi.rcWork.top - mi.rcMonitor.top - borderY;
+                mmi->ptMaxSize.x = workWidth;
+                mmi->ptMaxSize.y = workHeight + borderY;
+            }
+        }
+
+        return result;
+    }
+
     if (state.frameMode == FrameMode::CustomFrame) {
         // WM_NCCALCSIZE - This is the key to Windows 11 File Explorer style
         // We adjust the client area to remove the title bar while keeping borders
@@ -408,23 +469,22 @@ LRESULT CALLBACK CustomFrameWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
             int frameY = GetSystemMetricsForDpiSafe(SM_CYFRAME, dpi);
             int padding = GetSystemMetricsForDpiSafe(SM_CXPADDEDBORDER, dpi);
 
-            // Adjust the client rectangle
-            // Keep left, right, and bottom borders for resize
-            // Remove the top border to eliminate title bar
-            params->rgrc[0].left += frameX + padding;
-            params->rgrc[0].right -= frameX + padding;
-            params->rgrc[0].bottom -= frameY + padding;
-
             if (IsZoomed(hWnd)) {
-                // When maximized, add top padding to prevent content going under taskbar
+                // When maximized, the window rect extends beyond the work area
+                // by the frame thickness on all sides. We only need to inset the
+                // top to account for the title bar area (same as the frame padding
+                // Windows adds). Left/right/bottom borders are hidden off-screen
+                // so the client area fills the entire work area.
                 params->rgrc[0].top += frameY + padding;
             } else {
-                // When not maximized, we need a tiny top margin for the window border
-                // On Windows 11, this is typically 1 pixel
-                if (IsWindows11OrGreater()) {
-                    // Windows 11 has a visible 1px top border that we want to keep
-                    // Don't add anything to top - let DWM draw the border
-                }
+                // When not maximized, keep left, right, and bottom borders for resize
+                // Remove the top border to eliminate title bar
+                params->rgrc[0].left += frameX + padding;
+                params->rgrc[0].right -= frameX + padding;
+                params->rgrc[0].bottom -= frameY + padding;
+
+                // On Windows 11, DWM draws a visible 1px top border automatically
+                // Don't add anything to top - let DWM handle it
             }
 
             return 0;
@@ -472,31 +532,6 @@ LRESULT CALLBACK CustomFrameWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
                          SWP_FRAMECHANGED | SWP_NOZORDER);
         }
 
-        // WM_GETMINMAXINFO - Handle maximized window bounds while preserving min/max constraints
-        if (uMsg == WM_GETMINMAXINFO) {
-            // First, let the original WndProc (Flutter) set its min/max constraints
-            LRESULT result = 0;
-            if (state.originalWndProc) {
-                result = CallWindowProc(state.originalWndProc, hWnd, uMsg, wParam, lParam);
-            }
-
-            MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
-
-            // Get the monitor this window is on
-            HMONITOR monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-            MONITORINFO mi = { sizeof(mi) };
-            if (GetMonitorInfo(monitor, &mi)) {
-                // Only adjust the maximized position and size
-                // This ensures the window doesn't go under the taskbar when maximized
-                // The min/max tracking size constraints from Flutter are preserved
-                mmi->ptMaxPosition.x = mi.rcWork.left - mi.rcMonitor.left;
-                mmi->ptMaxPosition.y = mi.rcWork.top - mi.rcMonitor.top;
-                mmi->ptMaxSize.x = mi.rcWork.right - mi.rcWork.left;
-                mmi->ptMaxSize.y = mi.rcWork.bottom - mi.rcWork.top;
-            }
-
-            return result;
-        }
     } else if (state.frameMode == FrameMode::Hidden) {
         // Legacy hidden mode handling (borderless popup)
         if (uMsg == WM_NCHITTEST) {
@@ -627,6 +662,40 @@ extern "C" __declspec(dllexport) void SetCaptionHeight(HWND hwnd, int height) {
     if (it == g_window_states.end()) return;
 
     it->second.captionHeight = height > 0 ? height : DEFAULT_CAPTION_HEIGHT;
+}
+
+// Set window size constraints (in logical pixels, 0 = no constraint)
+extern "C" __declspec(dllexport) void SetSizeConstraints(
+    HWND hwnd,
+    int minWidth, int minHeight,
+    int maxWidth, int maxHeight
+) {
+    auto it = g_window_states.find(hwnd);
+
+    if (it == g_window_states.end()) {
+        // Window not managed yet - create a state and subclass the WndProc
+        WindowState state = {};
+        state.frameMode = FrameMode::Normal;
+        state.captionHeight = 0;
+        state.hasCaptionButtons = false;
+        state.minWidth = minWidth;
+        state.minHeight = minHeight;
+        state.maxWidth = maxWidth;
+        state.maxHeight = maxHeight;
+        state.hasConstraints = true;
+
+        state.originalWndProc = reinterpret_cast<WNDPROC>(
+            SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(CustomFrameWndProc))
+        );
+
+        g_window_states[hwnd] = state;
+    } else {
+        it->second.minWidth = minWidth;
+        it->second.minHeight = minHeight;
+        it->second.maxWidth = maxWidth;
+        it->second.maxHeight = maxHeight;
+        it->second.hasConstraints = true;
+    }
 }
 
 // Legacy: Enable or disable custom frame (hidden mode)

@@ -119,4 +119,21 @@ abstract class WindowDecorationPlatform extends PlatformInterface {
   /// When [visible] is true, the window will be shown.
   /// When [visible] is false, the window will be hidden.
   Future<void> setVisible({required bool visible});
+
+  /// Sets native window size constraints.
+  ///
+  /// These constraints are enforced at the OS level, preventing the window
+  /// from being resized beyond the specified bounds.
+  ///
+  /// Values of 0 mean no constraint for that dimension.
+  /// All values are in logical pixels.
+  Future<void> setSizeConstraints({
+    double minWidth = 0,
+    double minHeight = 0,
+    double maxWidth = 0,
+    double maxHeight = 0,
+  }) async {
+    // Default implementation: no-op
+    // Platforms that support native constraints should override this
+  }
 }
