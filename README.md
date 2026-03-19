@@ -55,6 +55,24 @@ Customize window decorations on desktop platforms with Flutter. This package pro
   - Always-on-top may not work (compositor restriction)
 - Opacity and fullscreen support
 
+## Screenshots
+
+### Title Bar Styles
+
+| Normal | Hidden |
+|--------|--------|
+| ![Normal Frame](screenshots/normal_frame.png) | ![Hidden Frame](screenshots/hidden_frame.png) |
+
+| Unified | Custom Frame |
+|---------|--------------|
+| ![Unified Frame](screenshots/unified_frame.png) | ![Custom Frame](screenshots/custom_frame.png) |
+
+### Window Appearance
+
+| Opacity (0.50) | Background Color (Red) | Background Color (Purple) |
+|----------------|------------------------|---------------------------|
+| ![Opacity](screenshots/opacity.png) | ![Red Background](screenshots/background_color_red.png) | ![Purple Background](screenshots/background_color_purple.png) |
+
 ## Installation
 
 Add to your `pubspec.yaml`:
