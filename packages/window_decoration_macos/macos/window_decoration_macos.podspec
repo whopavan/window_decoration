@@ -13,7 +13,7 @@ macOS implementation of the window_decoration plugin using Objective-C FFI.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Kishan R' => 'rkishan516@gmail.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  s.source_files = 'window_decoration_macos/Sources/window_decoration_macos/**/*'
   s.dependency 'FlutterMacOS'
   s.platform = :osx, '10.14'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
