@@ -366,7 +366,7 @@ LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
         HWND managedWindow = FindManagedWindow(msg->hwnd);
 
-        if (managedWindow != nullptr) {
+        if (managedWindow != nullptr && !IsIconic(managedWindow)) {
             if (msg->message == WM_MOUSEMOVE || msg->message == WM_NCMOUSEMOVE) {
                 POINT pt;
                 GetCursorPos(&pt);
@@ -409,6 +409,17 @@ LRESULT CALLBACK CustomFrameWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     }
 
     WindowState& state = it->second;
+
+    // When minimized, bypass all custom frame handling (NCHITTEST,
+    // NCCALCSIZE, etc.) to prevent the window from intercepting mouse
+    // events on the desktop at its pre-minimize position.
+    // Allow WM_SIZE and WM_GETMINMAXINFO through so restore works correctly.
+    if (IsIconic(hWnd) && uMsg != WM_SIZE && uMsg != WM_GETMINMAXINFO) {
+        if (state.originalWndProc) {
+            return CallWindowProc(state.originalWndProc, hWnd, uMsg, wParam, lParam);
+        }
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
 
     // WM_GETMINMAXINFO - Handle size constraints for ALL frame modes
     if (uMsg == WM_GETMINMAXINFO) {
