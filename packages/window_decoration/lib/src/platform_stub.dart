@@ -12,3 +12,17 @@ WindowDecorationPlatform createPlatform(RegularWindowController controller) {
 }
 
 String getPlatformName() => 'web';
+
+/// Stub classes so that `is` checks in [WindowDecorationService] compile on
+/// web where the real platform packages are not available.
+class WindowDecorationMacOS {
+  WindowDecorationMacOS._();
+}
+
+class WindowDecorationWindows {
+  WindowDecorationWindows._();
+}
+
+class WindowDecorationLinux {
+  WindowDecorationLinux._();
+}

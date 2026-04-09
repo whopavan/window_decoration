@@ -40,9 +40,8 @@ class WindowDecorationService {
     if (kIsWeb) {
       throw UnsupportedError('macOS-specific API not available on web.');
     }
-    final platformImpl = _platform as dynamic;
-    if (platformImpl.runtimeType.toString() == 'WindowDecorationMacOS') {
-      return platformImpl;
+    if (_platform is WindowDecorationMacOS) {
+      return _platform;
     }
     throw UnsupportedError(
       'macOS-specific API only available on macOS. '
@@ -56,9 +55,8 @@ class WindowDecorationService {
     if (kIsWeb) {
       throw UnsupportedError('Windows-specific API not available on web.');
     }
-    final platformImpl = _platform as dynamic;
-    if (platformImpl.runtimeType.toString() == 'WindowDecorationWindows') {
-      return platformImpl;
+    if (_platform is WindowDecorationWindows) {
+      return _platform;
     }
     throw UnsupportedError(
       'Windows-specific API only available on Windows. '
@@ -72,9 +70,8 @@ class WindowDecorationService {
     if (kIsWeb) {
       throw UnsupportedError('Linux-specific API not available on web.');
     }
-    final platformImpl = _platform as dynamic;
-    if (platformImpl.runtimeType.toString() == 'WindowDecorationLinux') {
-      return platformImpl;
+    if (_platform is WindowDecorationLinux) {
+      return _platform;
     }
     throw UnsupportedError(
       'Linux-specific API only available on Linux. '
