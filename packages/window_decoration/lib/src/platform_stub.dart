@@ -6,7 +6,7 @@ import 'package:window_decoration_web/src/window_decoration_web.dart';
 
 /// Web platform implementation helper
 
-WindowDecorationPlatform createPlatform(RegularWindowController controller) {
+WindowDecorationPlatform createPlatform(BaseWindowController controller) {
   // On web, there's no window handle
   return WindowDecorationWeb()..initialize(null);
 }

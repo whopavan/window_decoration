@@ -401,7 +401,7 @@ window_decoration/
 ### Key Design Decisions
 
 1. **Pure FFI**: Uses `dart:ffi` instead of platform channels for maximum performance
-2. **No Custom Window Types**: Integrates with Flutter's `RegularWindowController` via `getWindowHandle()`
+2. **No Custom Window Types**: Integrates with Flutter's `RegularWindowController` via `windowHandle`
 3. **Platform-Specific Extensions**: Each platform can expose unique features
 4. **Declarative & Programmatic**: Supports both widget-based and service-based APIs
 

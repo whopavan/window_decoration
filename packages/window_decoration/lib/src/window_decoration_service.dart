@@ -29,7 +29,7 @@ class WindowDecorationService {
   }
 
   /// The window controller provided by Flutter
-  final RegularWindowController _controller;
+  final BaseWindowController _controller;
 
   /// The platform-specific implementation
   late final WindowDecorationPlatform _platform;
