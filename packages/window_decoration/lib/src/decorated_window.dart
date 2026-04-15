@@ -1,142 +1,118 @@
-// ignore_for_file: invalid_use_of_internal_member
+// ignore_for_file: invalid_use_of_internal_member, implementation_imports
 
-import 'package:flutter/material.dart';
-// ignore: implementation_imports
 import 'package:flutter/src/widgets/_window.dart';
-import 'package:window_decoration/src/window_decoration_service.dart';
-import 'package:window_decoration_platform_interface/window_decoration_platform_interface.dart';
+import 'package:flutter/src/widgets/_window_macos.dart';
+import 'package:flutter/src/widgets/_window_win32.dart';
+import 'package:flutter/src/widgets/_window_linux.dart';
+import 'package:flutter/widgets.dart';
 
-/// A window widget with custom decorations
-///
-/// This widget wraps [RegularWindow] and applies custom decorations
-/// based on the provided [WindowDecorationConfig].
-///
-/// Example:
-/// ```dart
-/// final controller = RegularWindowController(...);
-///
-/// runWidget(
-///   DecoratedWindow(
-///     controller: controller,
-///     config: WindowDecorationConfig(
-///       centered: true,
-///       alwaysOnTop: false,
-///       titleBarStyle: TitleBarStyle.transparent,
-///     ),
-///     child: MyApp(),
-///   ),
-/// );
-/// ```
-class DecoratedWindow extends StatefulWidget {
-  const DecoratedWindow({
-    required this.controller,
-    required this.child,
-    this.config,
-    super.key,
-  });
+import 'decorated_window_macos.dart';
+import 'decorated_window_win32.dart';
+import 'decorated_window_linux.dart';
 
-  /// The window controller from Flutter's multi-window API
-  final RegularWindowController controller;
+abstract class DecoratedWindow {
+  static DecoratedWindow? forController(BaseWindowController controller) {
+    return _expando[controller];
+  }
 
-  /// The widget to display in the window
-  final Widget child;
+  static void init(BaseWindowController controller) {
+    final created = _create(
+      controller,
+      onClose: () {
+        _expando[controller] = null;
+      },
+    );
+    if (created != null) {
+      _expando[controller] = created;
+    }
+  }
 
-  /// Configuration for window decorations
+  static final _expando = Expando<DecoratedWindow>('DecoratedWindow');
+
+  static DecoratedWindow? _create(
+    BaseWindowController controller, {
+    required VoidCallback onClose,
+  }) {
+    if (controller is WindowControllerMacOS) {
+      return DecoratedWindowMacOS(
+        controller as WindowControllerMacOS,
+        onClose: onClose,
+      );
+    } else if (controller is WindowControllerWin32) {
+      return DecoratedWindowWin32(
+        controller as WindowControllerWin32,
+        onClose: onClose,
+      );
+    } else if (controller is WindowControllerLinux) {
+      return DecoratedWindowLinux(controller as WindowControllerLinux);
+    } else {
+      return null;
+    }
+  }
+
+  void setDraggableRectForElement(BuildContext element, Rect? rect);
+  void setDragExcludeRectForElement(BuildContext element, Rect? rect);
+  void setTrafficLightPosition(Offset offset);
+  void setMaximizeButtonFrame(BuildContext element, Rect? rect);
+  Size getTrafficLightSize();
+  void requestClose();
+
+  bool windowNeedsMoveDragDetector();
+  bool windowNeedsCustomBorder();
+  bool titlebarNeedsDoubleClickDetector();
+  void setCustomBorderShadowWidth(
+    double top,
+    double left,
+    double bottom,
+    double right,
+  );
+
+  void startWindowMoveDrag(Offset globalPosition);
+  void startWindowResizeDrag(Offset globalPosition, WindowEdge edge);
+
+  /// Center the window on its current screen.
+  Future<void> center();
+
+  /// Returns the current window origin in native screen coordinates.
   ///
-  /// If null, [WindowDecorationConfig.defaultConfig] will be used.
-  final WindowDecorationConfig? config;
+  /// Coordinate conventions differ by platform: macOS reports the bottom-left
+  /// corner of the window frame with the Y axis growing up; Windows and Linux
+  /// report the top-left corner with the Y axis growing down.
+  Future<Offset> getPosition();
 
-  @override
-  State<DecoratedWindow> createState() => _DecoratedWindowState();
+  /// Moves the window so that its origin is at [position], using the same
+  /// native coordinate convention documented on [getPosition].
+  Future<void> setPosition(Offset position);
+
+  /// Set the window background color.
+  Future<void> setBackgroundColor(Color color);
+
+  /// Set the window opacity (0.0 to 1.0).
+  Future<void> setOpacity(double opacity);
+
+  /// Set whether the window is always on top of other windows.
+  Future<void> setAlwaysOnTop({required bool alwaysOnTop});
+
+  /// Set whether the window skips the taskbar / dock.
+  Future<void> setSkipTaskbar({required bool skip});
+
+  /// Set whether the window is visible.
+  Future<void> setVisible({required bool visible});
+
+  /// Convenience wrapper for [setVisible] with `visible: true`.
+  Future<void> show() => setVisible(visible: true);
+
+  /// Convenience wrapper for [setVisible] with `visible: false`.
+  Future<void> hide() => setVisible(visible: false);
 }
 
-class _DecoratedWindowState extends State<DecoratedWindow> {
-  late final WindowDecorationService _service;
-  bool _configurationApplied = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _service = WindowDecorationService(widget.controller);
-
-    // Apply configuration after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_configurationApplied) {
-        _applyConfiguration();
-      }
-    });
-  }
-
-  Future<void> _applyConfiguration() async {
-    if (_configurationApplied) {
-      return;
-    }
-
-    final config = widget.config ?? WindowDecorationConfig.defaultConfig;
-
-    try {
-      // Apply window positioning
-      if (config.centered) {
-        await _service.center();
-      }
-
-      // Apply window behavior
-      if (config.alwaysOnTop) {
-        await _service.setAlwaysOnTop(alwaysOnTop: true);
-      }
-
-      if (config.skipTaskbar) {
-        await _service.setSkipTaskbar(skip: true);
-      }
-
-      // Apply appearance
-      if (config.backgroundColor != null) {
-        await _service.setBackgroundColor(config.backgroundColor!);
-      }
-
-      if (config.opacity != null) {
-        await _service.setOpacity(config.opacity!);
-      }
-
-      // Apply title bar style
-      await _service.setTitleBarStyle(
-        config.titleBarStyle,
-        captionHeight: config.captionHeight,
-      );
-
-      // Apply size constraints
-      if (config.sizeConstraints != null) {
-        final constraints = config.sizeConstraints!;
-        await _service.setSizeConstraints(
-          minWidth: constraints.minWidth,
-          minHeight: constraints.minHeight,
-          maxWidth: constraints.maxWidth.isFinite ? constraints.maxWidth : 0,
-          maxHeight: constraints.maxHeight.isFinite ? constraints.maxHeight : 0,
-        );
-      }
-
-      // Apply visibility
-      await _service.setVisible(visible: config.visible);
-
-      // Apply platform-specific effects
-      // TODO(enhancement): Implement effects application
-
-      _configurationApplied = true;
-    } on Exception catch (e, stackTrace) {
-      debugPrint('Error applying window decoration configuration: $e');
-      debugPrint('Stack trace: $stackTrace');
-    }
-  }
-
-  @override
-  void dispose() {
-    _service.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      // Simply wrap the child with RegularWindow
-      // The decoration configuration is applied via the service
-      RegularWindow(controller: widget.controller, child: widget.child);
+enum WindowEdge {
+  northWest,
+  north,
+  northEast,
+  west,
+  east,
+  southWest,
+  south,
+  southEast,
 }

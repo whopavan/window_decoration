@@ -1,41 +1,25 @@
 name: window_decoration
-description: Customize window decorations on desktop and web platforms (macOS, Windows, Linux, Web)
-version: 0.1.0
+description: "Fully custom windows and decorations for Flutter multi-window."
+version: 0.2.0
+homepage: https://github.com/rkishan516/window_decoration
 publish_to: none
-resolution: workspace
 
 environment:
-  sdk: '>=3.10.0 <4.0.0'
-  flutter: '>=3.38.1'
+  sdk: ^3.12.0
+  flutter: ">=3.42.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  window_decoration_linux:
-    path: ../window_decoration_linux
-  window_decoration_macos:
-    path: ../window_decoration_macos
-  window_decoration_platform_interface:
-    path: ../window_decoration_platform_interface
-  window_decoration_web:
-    path: ../window_decoration_web
-  window_decoration_windows:
-    path: ../window_decoration_windows
+  native_toolchain_ninja: ^0.1.1
+  hooks: ^1.0.2
+  code_assets: ^1.0.0
+  logging: ^1.3.0
+  ffi: ^2.2.0
+  win32: ^6.0.0
 
 dev_dependencies:
+  ffigen: ^20.1.1
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  integration_test:
-    sdk: flutter
-
-flutter:
-  plugin:
-    platforms:
-      macos:
-        default_package: window_decoration_macos
-      windows:
-        default_package: window_decoration_windows
-      linux:
-        default_package: window_decoration_linux
-      web:
-        default_package: window_decoration_web

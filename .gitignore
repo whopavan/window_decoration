@@ -47,6 +47,9 @@ app.*.map.json
 *.g.dart
 *.freezed.dart
 *.mocks.dart
+# ffigen bindings are tracked even though they are *.g.dart
+!packages/window_decoration/lib/src/macos.g.dart
+!packages/window_decoration/lib/src/linux.g.dart
 
 # Coverage
 coverage/

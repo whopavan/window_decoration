@@ -2,60 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## 0.2.0
 
-## [Unreleased]
+BREAKING: full architectural rewrite. Package is now a single, unified Flutter package (no longer federated).
 
-### Changed
-- Migrated to Dart workspace architecture
-- Updated minimum Dart SDK to 3.10.0
-- Updated minimum Flutter SDK to 3.38.1
-- Centralized analysis configuration
-
-## [0.1.0] - 2025-01-16
+### Removed
+- `WindowDecorationService` class — dropped in favor of the widget-first API.
+- `DecoratedWindow` *widget* — the name now refers to the abstract platform-dispatch base class.
+- `TitleBarStyle` enum and `setTitleBarStyle()` — replaced by `WindowDragArea` + custom chrome widgets.
+- `WindowBounds`, `getBounds()`, `setBounds()` — use `RegularWindowController.contentSize` and `setSize()` directly.
+- `setSizeConstraints()` — use `RegularWindowController.setConstraints()`.
+- `setFullScreen()` — use `RegularWindowController.setFullscreen()`.
+- `onWindowStateChanged` stream — replaced by `WindowDelegateMacOS`/`Win32`/`Linux` mixins.
+- Windows C++ native plugin — all Win32 handling now pure Dart via `SetWindowSubclass` from `package:win32`.
+- Federated packages: `window_decoration_linux`, `window_decoration_macos`, `window_decoration_windows`, `window_decoration_platform_interface`, `window_decoration_web`.
 
 ### Added
-- Initial release with multi-platform support (macOS, Windows, Linux)
-- Core features (all platforms):
-  - Window positioning: `center()`, `getBounds()`, `setBounds()`
-  - Window appearance: `setBackgroundColor()`, `setOpacity()`
-  - Window behavior: `setAlwaysOnTop()`, `setSkipTaskbar()`, `setFullScreen()`
-  - Title bar styles: Normal, Hidden, Transparent, Unified
-- Declarative API via `DecoratedWindow` widget
-- Programmatic API via `WindowDecorationService`
-- Example application demonstrating all features
+- `controller.enableDecoratedWindow()` extension on `BaseWindowController`.
+- Widget API: `WindowDragArea`, `WindowDragExcludeArea`, `WindowTrafficLight`, `CloseButton`, `MinimizeButton`, `MaximizeButton`, `WindowBorder`.
+- Delegate mixins with FFI `NativeCallable` bridging: `WindowDelegateMacOS` (windowWillClose/WillResize/WillUseStandardFrame/Enter+ExitFullScreen), `WindowDelegateWin32` (windowWillClose/WillResizeToSize + `Win32MessageHandler`), `WindowDelegateLinux` (windowWillClose/StateDidChange + `WindowStateLinux`).
+- ffigen-generated bindings for macOS and Linux native code.
+- Native code built via Dart's native hooks (`hooks` + `native_toolchain_ninja` + `code_assets`).
 
-### Platform-Specific Features
+## 0.1.0
 
-#### macOS (10.14+)
-- NSVisualEffectMaterial support for vibrancy effects
-- Window shadow control
-- Movable by window background
-- Collection behavior configuration
-- Full NSWindow API access
-
-#### Windows (10/11)
-- DWM (Desktop Window Manager) effects
-- Mica effect (Windows 11)
-- Acrylic backdrop (Windows 10 1803+)
-- Custom window corner preference
-- Border and caption color customization
-- Dark mode titlebar support
-- Win32 window manipulation via FFI
-
-#### Linux (GTK3/X11)
-- GTK3-based window management
-- X11 support for positioning and always-on-top
-- Wayland support with limitations (compositor restrictions)
-- Opacity and fullscreen support
-- X11 window manager hints
-
-### Platform Support
-- ✅ macOS 10.14+ (fully supported and tested)
-- ✅ Windows 10/11 (fully implemented)
-- ✅ Linux (GTK3/X11/Wayland)
-
-## [Unreleased]
-
-[0.1.0]: https://github.com/rkishan516/window_decoration/releases/tag/v0.1.0
+Initial federated-plugin release. Removed in 0.2.0.

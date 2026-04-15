@@ -1,33 +1,30 @@
 // ignore_for_file: implementation_imports, invalid_use_of_internal_member
 
-import 'dart:async';
-import 'dart:io';
+import 'dart:io' show Platform;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide CloseButton;
 import 'package:flutter/src/widgets/_window.dart';
 import 'package:window_decoration/window_decoration.dart';
 
 void main() {
-  // Initialize Flutter binding
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Create RegularWindowController
   final controller = RegularWindowController(
     preferredSize: const Size(900, 700),
     title: 'Window Decoration Demo',
   );
+  controller.enableDecoratedWindow();
 
-  // Run the app with RegularWindow
   runWidget(
     RegularWindow(
       controller: controller,
-      child: WindowDecorationDemoApp(controller: controller),
+      child: _DemoApp(controller: controller),
     ),
   );
 }
 
-class WindowDecorationDemoApp extends StatelessWidget {
-  const WindowDecorationDemoApp({required this.controller, super.key});
+class _DemoApp extends StatelessWidget {
+  const _DemoApp({required this.controller});
 
   final RegularWindowController controller;
 
@@ -37,434 +34,321 @@ class WindowDecorationDemoApp extends StatelessWidget {
       title: 'Window Decoration Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(useMaterial3: true),
-      home: DemoHomePage(controller: controller),
+      home: _DemoHome(controller: controller),
     );
   }
 }
 
-class DemoHomePage extends StatefulWidget {
-  const DemoHomePage({required this.controller, super.key});
+class _DemoHome extends StatefulWidget {
+  const _DemoHome({required this.controller});
 
   final RegularWindowController controller;
 
   @override
-  State<DemoHomePage> createState() => _DemoHomePageState();
+  State<_DemoHome> createState() => _DemoHomeState();
 }
 
-class _DemoHomePageState extends State<DemoHomePage> {
-  late final WindowDecorationService service;
-  String statusMessage = 'Ready';
-  double opacity = 1.0;
-  bool alwaysOnTop = false;
-  bool skipTaskbar = false;
-  bool fullScreen = false;
-  TitleBarStyle titleBarStyle = TitleBarStyle.normal;
-  Color backgroundColor = Colors.black;
-  WindowBounds? currentBounds;
+class _DemoHomeState extends State<_DemoHome> {
+  double _opacity = 1.0;
+  bool _alwaysOnTop = false;
+  bool _skipTaskbar = false;
 
-  @override
-  void initState() {
-    super.initState();
-    service = WindowDecorationService(widget.controller);
-    // Load initial window bounds
-    _loadCurrentBounds();
-  }
-
-  Future<void> _loadCurrentBounds() async {
-    try {
-      final bounds = await service.getBounds();
-      if (!mounted) return;
-      setState(() {
-        currentBounds = bounds;
-        statusMessage = 'Loaded window bounds';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error loading bounds: $e');
-    }
-  }
-
-  void _setStatus(String message) {
-    setState(() {
-      statusMessage = message;
-    });
-    debugPrint(message);
-  }
-
-  Future<void> _centerWindow() async {
-    try {
-      await service.center();
-      if (!mounted) return;
-      _setStatus('Window centered successfully');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error centering window: $e');
-    }
-  }
-
-  Future<void> _setOpacity(double value) async {
-    try {
-      await service.setOpacity(value);
-      if (!mounted) return;
-      setState(() {
-        opacity = value;
-      });
-      _setStatus('Opacity set to ${value.toStringAsFixed(2)}');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error setting opacity: $e');
-    }
-  }
-
-  Future<void> _toggleAlwaysOnTop() async {
-    try {
-      final newValue = !alwaysOnTop;
-      await service.setAlwaysOnTop(alwaysOnTop: newValue);
-      if (!mounted) return;
-      setState(() {
-        alwaysOnTop = newValue;
-      });
-      _setStatus('Always on top: $newValue');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error toggling always on top: $e');
-    }
-  }
-
-  Future<void> _toggleSkipTaskbar() async {
-    try {
-      final newValue = !skipTaskbar;
-      await service.setSkipTaskbar(skip: newValue);
-      if (!mounted) return;
-      setState(() {
-        skipTaskbar = newValue;
-      });
-      _setStatus('Skip taskbar: $newValue');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error toggling skip taskbar: $e');
-    }
-  }
-
-  Future<void> _toggleFullScreen() async {
-    try {
-      final newValue = !fullScreen;
-      await service.setFullScreen(fullScreen: newValue);
-      if (!mounted) return;
-      setState(() {
-        fullScreen = newValue;
-      });
-      _setStatus('Fullscreen: $newValue');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error toggling fullscreen: $e');
-    }
-  }
-
-  Future<void> _setTitleBarStyle(TitleBarStyle style) async {
-    try {
-      await service.setTitleBarStyle(style);
-      if (!mounted) return;
-      setState(() {
-        titleBarStyle = style;
-      });
-      _setStatus('Title bar style: ${style.name}');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error setting title bar style: $e');
-    }
-  }
-
-  Future<void> _setBackgroundColor(Color color) async {
-    try {
-      await service.setBackgroundColor(color);
-      if (!mounted) return;
-      setState(() {
-        backgroundColor = color;
-      });
-      _setStatus('Background color changed');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error setting background color: $e');
-    }
-  }
-
-  Future<void> _setVibrancy(NSVisualEffectMaterial material) async {
-    if (!Platform.isMacOS) {
-      _setStatus('Vibrancy is macOS-only');
-      return;
-    }
-    try {
-      await service.macos.setVibrancy(material);
-      if (!mounted) return;
-      _setStatus('Vibrancy: ${material.name}');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error setting vibrancy: $e');
-    }
-  }
-
-  Future<void> _resetDefaults() async {
-    try {
-      await service.setOpacity(1.0);
-      await service.setAlwaysOnTop(alwaysOnTop: false);
-      await service.setSkipTaskbar(skip: false);
-      await service.setFullScreen(fullScreen: false);
-      await service.setTitleBarStyle(TitleBarStyle.normal);
-      await service.setBackgroundColor(Colors.black);
-
-      if (!mounted) return;
-      setState(() {
-        opacity = 1.0;
-        alwaysOnTop = false;
-        skipTaskbar = false;
-        fullScreen = false;
-        titleBarStyle = TitleBarStyle.normal;
-        backgroundColor = Colors.black;
-      });
-
-      _setStatus('Reset to defaults');
-    } catch (e) {
-      if (!mounted) return;
-      _setStatus('Error resetting: $e');
-    }
-  }
+  DecoratedWindow? get _window => DecoratedWindow.forController(widget.controller);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Window Decoration Interactive Demo'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _resetDefaults,
-            tooltip: 'Reset to defaults',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return WindowBorder(
+      child: Scaffold(
+        backgroundColor: Colors.blueGrey.shade900,
+        body: Column(
           children: [
-            // Status bar
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade900.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
+            _TitleBar(controller: widget.controller),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(24),
                 children: [
-                  const Icon(Icons.info_outline, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      statusMessage,
-                      style: const TextStyle(fontSize: 14),
-                    ),
+                  const _SectionHeader('Shared controls'),
+                  _opacitySlider(),
+                  _toggle(
+                    label: 'Always on top',
+                    value: _alwaysOnTop,
+                    onChanged: (v) async {
+                      await _window?.setAlwaysOnTop(alwaysOnTop: v);
+                      setState(() => _alwaysOnTop = v);
+                    },
                   ),
+                  _toggle(
+                    label: 'Skip taskbar / dock',
+                    value: _skipTaskbar,
+                    onChanged: (v) async {
+                      await _window?.setSkipTaskbar(skip: v);
+                      setState(() => _skipTaskbar = v);
+                    },
+                  ),
+                  Row(
+                    children: [
+                      FilledButton(
+                        onPressed: () => _window?.center(),
+                        child: const Text('Center window'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        onPressed: () => _window?.hide().then((_) async {
+                          await Future.delayed(const Duration(seconds: 1));
+                          await _window?.show();
+                        }),
+                        child: const Text('Hide for 1 second'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  if (Platform.isMacOS) _macOSSection(),
+                  if (Platform.isWindows) _windowsSection(),
+                  if (Platform.isLinux) _linuxSection(),
                 ],
               ),
             ),
-
-            const SizedBox(height: 24),
-
-            // Window Bounds Info
-            if (currentBounds != null) ...[
-              _buildSection('Current Window Bounds', [
-                Text(
-                  'Position: (${currentBounds!.x.toInt()}, ${currentBounds!.y.toInt()})\n'
-                  'Size: ${currentBounds!.width.toInt()} × ${currentBounds!.height.toInt()}',
-                  style: const TextStyle(fontFamily: 'monospace'),
-                ),
-              ]),
-              const SizedBox(height: 24),
-            ],
-
-            // Window Positioning
-            _buildSection('Window Positioning', [
-              ElevatedButton.icon(
-                onPressed: _centerWindow,
-                icon: const Icon(Icons.center_focus_strong),
-                label: const Text('Center Window'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: _loadCurrentBounds,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Refresh Bounds'),
-              ),
-            ]),
-
-            const SizedBox(height: 24),
-
-            // Window Appearance
-            _buildSection('Window Appearance', [
-              const Text(
-                'Opacity:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: opacity,
-                      min: 0.3,
-                      max: 1.0,
-                      divisions: 14,
-                      label: opacity.toStringAsFixed(2),
-                      onChanged: _setOpacity,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 60,
-                    child: Text(
-                      opacity.toStringAsFixed(2),
-                      style: const TextStyle(fontFamily: 'monospace'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Background Color:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _colorButton(Colors.black, 'Black'),
-                  _colorButton(Colors.white, 'White'),
-                  _colorButton(Colors.red.shade900, 'Red'),
-                  _colorButton(Colors.blue.shade900, 'Blue'),
-                  _colorButton(Colors.green.shade900, 'Green'),
-                  _colorButton(Colors.purple.shade900, 'Purple'),
-                ],
-              ),
-            ]),
-
-            const SizedBox(height: 24),
-
-            // Window Behavior
-            _buildSection('Window Behavior', [
-              SwitchListTile(
-                title: const Text('Always on Top'),
-                subtitle: const Text('Keep window above all others'),
-                value: alwaysOnTop,
-                onChanged: (_) => _toggleAlwaysOnTop(),
-              ),
-              SwitchListTile(
-                title: const Text('Skip Taskbar'),
-                subtitle: const Text('Hide from dock/taskbar'),
-                value: skipTaskbar,
-                onChanged: (_) => _toggleSkipTaskbar(),
-              ),
-              SwitchListTile(
-                title: const Text('Fullscreen'),
-                subtitle: const Text('Toggle fullscreen mode'),
-                value: fullScreen,
-                onChanged: (_) => _toggleFullScreen(),
-              ),
-            ]),
-
-            const SizedBox(height: 24),
-
-            // Title Bar Styles
-            _buildSection('Title Bar Style', [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _titleBarButton(TitleBarStyle.normal, 'Normal'),
-                  _titleBarButton(TitleBarStyle.hidden, 'Hidden'),
-                  _titleBarButton(TitleBarStyle.transparent, 'Transparent'),
-                  _titleBarButton(TitleBarStyle.unified, 'Unified'),
-                ],
-              ),
-            ]),
-
-            const SizedBox(height: 24),
-
-            // macOS-Specific Features
-            if (Platform.isMacOS) ...[
-              _buildSection('macOS Vibrancy Effects', [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _vibrancyButton(NSVisualEffectMaterial.sidebar, 'Sidebar'),
-                    _vibrancyButton(
-                      NSVisualEffectMaterial.titlebar,
-                      'Titlebar',
-                    ),
-                    _vibrancyButton(NSVisualEffectMaterial.menu, 'Menu'),
-                    _vibrancyButton(NSVisualEffectMaterial.popover, 'Popover'),
-                    _vibrancyButton(
-                      NSVisualEffectMaterial.windowBackground,
-                      'Window BG',
-                    ),
-                  ],
-                ),
-              ]),
-              const SizedBox(height: 24),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSection(String title, List<Widget> children) {
+  Widget _opacitySlider() => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      children: [
+        const SizedBox(width: 140, child: Text('Opacity')),
+        Expanded(
+          child: Slider(
+            value: _opacity,
+            min: 0.3,
+            max: 1.0,
+            onChanged: (v) async {
+              setState(() => _opacity = v);
+              await _window?.setOpacity(v);
+            },
+          ),
+        ),
+        SizedBox(width: 48, child: Text(_opacity.toStringAsFixed(2))),
+      ],
+    ),
+  );
+
+  Widget _toggle({
+    required String label,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) => SwitchListTile(
+    title: Text(label),
+    value: value,
+    onChanged: onChanged,
+    contentPadding: EdgeInsets.zero,
+  );
+
+  Widget _macOSSection() {
+    final macWindow = _window as DecoratedWindowMacOS?;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        const _SectionHeader('macOS'),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            FilledButton(
+              onPressed: () => macWindow?.setVibrancy(
+                NSVisualEffectMaterial.sidebar,
+              ),
+              child: const Text('Vibrancy: sidebar'),
+            ),
+            FilledButton(
+              onPressed: () => macWindow?.setVibrancy(
+                NSVisualEffectMaterial.hudWindow,
+              ),
+              child: const Text('Vibrancy: HUD'),
+            ),
+            FilledButton(
+              onPressed: () => macWindow?.setHasShadow(hasShadow: false),
+              child: const Text('Remove shadow'),
+            ),
+            FilledButton(
+              onPressed: () => macWindow?.setHasShadow(hasShadow: true),
+              child: const Text('Add shadow'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  macWindow?.setMovableByWindowBackground(movable: true),
+              child: const Text('Movable by background'),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        ...children,
       ],
     );
   }
 
-  Widget _colorButton(Color color, String label) {
-    final isSelected = backgroundColor == color;
-    return ElevatedButton(
-      onPressed: () => _setBackgroundColor(color),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: color.computeLuminance() > 0.5
-            ? Colors.black
-            : Colors.white,
-        side: isSelected
-            ? const BorderSide(color: Colors.white, width: 3)
-            : null,
-      ),
-      child: Text(label),
+  Widget _windowsSection() {
+    final winWindow = _window as DecoratedWindowWin32?;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader('Windows'),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            FilledButton(
+              onPressed: () => winWindow?.setSystemBackdrop(
+                DWMSystemBackdropType.mainWindow,
+              ),
+              child: const Text('Backdrop: Mica'),
+            ),
+            FilledButton(
+              onPressed: () => winWindow?.setSystemBackdrop(
+                DWMSystemBackdropType.transientWindow,
+              ),
+              child: const Text('Backdrop: Acrylic'),
+            ),
+            FilledButton(
+              onPressed: () => winWindow?.setCornerPreference(
+                WindowCornerPreference.round,
+              ),
+              child: const Text('Corners: round'),
+            ),
+            FilledButton(
+              onPressed: () => winWindow?.setDarkMode(enabled: true),
+              child: const Text('Dark caption'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  winWindow?.setBorderColor(Colors.deepPurpleAccent),
+              child: const Text('Border: purple'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _titleBarButton(TitleBarStyle style, String label) {
-    final isSelected = titleBarStyle == style;
-    return ElevatedButton(
-      onPressed: () => _setTitleBarStyle(style),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? Colors.blue : null,
-      ),
-      child: Text(label),
-    );
-  }
-
-  Widget _vibrancyButton(NSVisualEffectMaterial material, String label) {
-    return ElevatedButton(
-      onPressed: () => _setVibrancy(material),
-      child: Text(label),
+  Widget _linuxSection() {
+    final linuxWindow = _window as DecoratedWindowLinux?;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader('Linux'),
+        FutureBuilder<String>(
+          future: () async {
+            if (linuxWindow == null) return 'unavailable';
+            if (await linuxWindow.isWayland()) return 'Wayland';
+            if (await linuxWindow.isX11()) return 'X11';
+            return 'unknown';
+          }(),
+          builder: (context, snap) =>
+              Text('Display server: ${snap.data ?? '...'}'),
+        ),
+      ],
     );
   }
 }
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 8),
+    child: Text(
+      label,
+      style: Theme.of(context).textTheme.titleLarge,
+    ),
+  );
+}
+
+class _TitleBar extends StatelessWidget {
+  const _TitleBar({required this.controller});
+
+  final RegularWindowController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return WindowDragArea(
+      child: Container(
+        height: 40,
+        color: Colors.blueGrey.shade800,
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            const WindowTrafficLight(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Center(
+                child: Text(
+                  'Window Decoration Demo',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ),
+            if (!Platform.isMacOS) ...[
+              _TitlebarIconButton.minimize(),
+              _TitlebarIconButton.maximize(),
+              _TitlebarIconButton.close(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TitlebarIconButton extends StatelessWidget {
+  const _TitlebarIconButton._({
+    required this.icon,
+    required this.kind,
+  });
+
+  factory _TitlebarIconButton.close() =>
+      const _TitlebarIconButton._(icon: Icons.close, kind: _Kind.close);
+
+  factory _TitlebarIconButton.minimize() =>
+      const _TitlebarIconButton._(icon: Icons.remove, kind: _Kind.minimize);
+
+  factory _TitlebarIconButton.maximize() => const _TitlebarIconButton._(
+    icon: Icons.crop_square,
+    kind: _Kind.maximize,
+  );
+
+  final IconData icon;
+  final _Kind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (kind) {
+      case _Kind.close:
+        return CloseButton(builder: _build);
+      case _Kind.minimize:
+        return MinimizeButton(builder: _build);
+      case _Kind.maximize:
+        return MaximizeButton(
+          builder: (context, state, isMaximized) => _build(context, state),
+        );
+    }
+  }
+
+  Widget _build(BuildContext context, TitlebarButtonState state) {
+    final color = kind == _Kind.close && state.hovered
+        ? Colors.red
+        : state.hovered
+        ? Colors.white24
+        : Colors.transparent;
+    return Container(
+      width: 46,
+      height: 40,
+      color: color,
+      child: Icon(icon, size: 16, color: Colors.white),
+    );
+  }
+}
+
+enum _Kind { close, minimize, maximize }

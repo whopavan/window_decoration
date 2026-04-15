@@ -1,434 +1,158 @@
 # window_decoration
 
-Customize window decorations on desktop platforms with Flutter. This package provides both declarative and programmatic APIs for controlling window appearance and behavior.
+Fully custom windows and decorations for Flutter desktop, designed to work with
+Flutter's experimental multi-window API (`RegularWindowController`).
 
-## Platform Support
-
-| Feature | macOS | Windows | Linux |
-|---------|-------|---------|-------|
-| Center window | ✅ | ✅ | ✅ |
-| Get/Set bounds | ✅ | ✅ | ✅ |
-| Show/Hide window | ✅ | ✅ | ✅ |
-| Background color | ✅ | ✅ | ⚠️ Limited |
-| Opacity | ✅ | ✅ | ✅ |
-| Always on top | ✅ | ✅ | ✅ X11 / ⚠️ Wayland |
-| Skip taskbar/dock | ✅ | ✅ | ✅ |
-| Fullscreen | ✅ | ✅ | ✅ |
-| Title bar styles | ✅ | ⚠️ Limited | ⚠️ Limited |
-| Vibrancy effects | ✅ NSVisualEffect | - | - |
-| DWM effects | - | ✅ Mica/Acrylic | - |
-
-**Legend:** ✅ Full Support | ⚠️ Limited Support | - Not Applicable
+`window_decoration` 0.2.x is a single pure-Dart Flutter package. Platform code
+for macOS and Linux is shipped as native source and built via Dart's native
+build hooks; Windows uses `package:win32` only (no plugin DLL).
 
 ## Features
 
-### Core Features (All Platforms)
-- **Window Positioning**: Center windows, get/set custom bounds
-- **Window Visibility**: Show/hide windows programmatically
-- **Appearance**: Background color, opacity control
-- **Behavior**: Always on top, skip taskbar, fullscreen mode
-- **Title Bar**: Multiple styles (normal, hidden, transparent, unified)
+- Widget-driven custom title bars via `WindowDragArea`
+- macOS traffic lights repositionable with `WindowTrafficLight`
+- Cross-platform `CloseButton` / `MinimizeButton` / `MaximizeButton`
+- Linux custom border, shadow, and resize handles via `WindowBorder`
+- Platform-specific window chrome:
+  - **macOS**: `NSVisualEffectView` vibrancy, shadow, movable-by-background,
+    collection behavior, fullscreen/resize delegate hooks
+  - **Windows**: DWM Mica/Acrylic backdrop, corner preference, border color,
+    immersive dark mode, `WM_*` message handler hook
+  - **Linux**: GTK opacity, keep-above, skip-taskbar, window-state delegate
 
-### Platform-Specific Features
+## Platform support
 
-#### macOS
-- Vibrancy/blur effects with NSVisualEffectMaterial
-- Window shadow control
-- Movable by window background
-- Collection behavior configuration
-- Complete NSWindow API access
-
-#### Windows
-- DWM (Desktop Window Manager) effects
-  - Mica effect (Windows 11)
-  - Acrylic backdrop (Windows 10 1803+)
-  - Custom window corner preference
-  - Border and caption color customization
-- Dark mode support (Windows 10 1809+)
-- Layered windows for transparency
-
-#### Linux
-- GTK3-based window management
-- X11 support for positioning and always-on-top
-- Wayland support with limitations:
-  - Window positioning not available (compositor restriction)
-  - Always-on-top may not work (compositor restriction)
-- Opacity and fullscreen support
-
-## Screenshots
-
-### Title Bar Styles
-
-| Normal | Hidden |
-|--------|--------|
-| ![Normal Frame](screenshots/normal_frame.png) | ![Hidden Frame](screenshots/hidden_frame.png) |
-
-| Unified | Custom Frame |
-|---------|--------------|
-| ![Unified Frame](screenshots/unified_frame.png) | ![Custom Frame](screenshots/custom_frame.png) |
-
-### Window Appearance
-
-| Opacity (0.50) | Background Color (Red) | Background Color (Purple) |
-|----------------|------------------------|---------------------------|
-| ![Opacity](screenshots/opacity.png) | ![Red Background](screenshots/background_color_red.png) | ![Purple Background](screenshots/background_color_purple.png) |
+| Platform | Status |
+|----------|--------|
+| macOS    | Supported (Apple Silicon + Intel) |
+| Windows  | Supported (Windows 10 1809+, Mica/Acrylic need Windows 11) |
+| Linux    | Supported (GTK 3, X11; Wayland has compositor limitations) |
+| Web/iOS/Android | Not supported |
 
 ## Installation
 
-Add to your `pubspec.yaml`:
+Path dependency:
+```yaml
+dependencies:
+  window_decoration:
+    path: path/to/window_decoration
+```
 
+Or via git:
 ```yaml
 dependencies:
   window_decoration:
     git:
-      url: https://github.com/rkishan516/window_decoration.git
+      url: https://github.com/rkishan516/window_decoration
       path: packages/window_decoration
 ```
 
-Or for local development:
+The package uses Dart native build hooks (`hooks`, `native_toolchain_ninja`,
+`code_assets`), which require Flutter 3.42+. Enable native asset building if
+your Flutter version does not do so by default:
 
-```yaml
-dependencies:
-  window_decoration:
-    path: ../window_decoration/packages/window_decoration
+```
+flutter config --enable-native-assets
 ```
 
-## Usage
-
-### Declarative API (DecoratedWindow Widget)
-
-The simplest way to use window_decoration is with the `DecoratedWindow` widget:
+## Quick start
 
 ```dart
+import 'package:flutter/material.dart' hide CloseButton;
 import 'package:flutter/src/widgets/_window.dart';
 import 'package:window_decoration/window_decoration.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   final controller = RegularWindowController(
-    preferredSize: Size(1200, 800),
+    preferredSize: const Size(800, 600),
     title: 'My App',
   );
-
-  runWidget(
-    DecoratedWindow(
-      controller: controller,
-      config: WindowDecorationConfig(
-        centered: true,
-        alwaysOnTop: false,
-        visible: true,
-        titleBarStyle: TitleBarStyle.transparent,
-        backgroundColor: Colors.black,
-        opacity: 0.95,
-      ),
-      child: MyApp(),
-    ),
-  );
-}
-```
-
-### Programmatic API (WindowDecorationService)
-
-For dynamic control, use the `WindowDecorationService`:
-
-```dart
-import 'package:flutter/src/widgets/_window.dart';
-import 'package:window_decoration/window_decoration.dart';
-
-class MyApp extends StatefulWidget {
-  @override
-  State<MyApp> createState() => _MyAppState();
+  controller.enableDecoratedWindow();
+  runWidget(RegularWindow(controller: controller, child: MyApp()));
 }
 
-class _MyAppState extends State<MyApp> {
-  late WindowDecorationService _service;
-
-  @override
-  void initState() {
-    super.initState();
-    final controller = WindowScope.of(context) as RegularWindowController;
-    _service = WindowDecorationService(controller);
-
-    _setupWindow();
-  }
-
-  Future<void> _setupWindow() async {
-    // Center the window
-    await _service.center();
-
-    // Set always on top
-    await _service.setAlwaysOnTop(alwaysOnTop: true);
-
-    // Set opacity
-    await _service.setOpacity(0.9);
-
-    // Configure title bar
-    await _service.setTitleBarStyle(TitleBarStyle.transparent);
-
-    // Show the window
-    await _service.show();
-  }
+class MyTitleBar extends StatelessWidget {
+  const MyTitleBar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: () => _service.center(),
-                child: Text('Center Window'),
+    return WindowDragArea(
+      child: SizedBox(
+        height: 40,
+        child: Row(
+          children: [
+            const WindowTrafficLight(),
+            const Spacer(),
+            MinimizeButton(builder: _icon(Icons.remove)),
+            MaximizeButton(
+              builder: (context, state, isMaximized) =>
+                  _icon(isMaximized ? Icons.filter_none : Icons.crop_square)(
+                context,
+                state,
               ),
-              ElevatedButton(
-                onPressed: () => _service.setFullScreen(fullScreen: true),
-                child: Text('Fullscreen'),
-              ),
-              ElevatedButton(
-                onPressed: () => _service.hide(),
-                child: Text('Hide Window'),
-              ),
-              ElevatedButton(
-                onPressed: () => _service.show(),
-                child: Text('Show Window'),
-              ),
-            ],
-          ),
+            ),
+            CloseButton(builder: _icon(Icons.close)),
+          ],
         ),
       ),
     );
   }
+
+  Widget Function(BuildContext, TitlebarButtonState) _icon(IconData d) =>
+      (context, s) => Container(
+            width: 46,
+            color: s.hovered ? Colors.white10 : Colors.transparent,
+            child: Icon(d, size: 16),
+          );
 }
 ```
 
-### Platform-Specific Feature Access
-
-#### macOS-Specific Features
-
-Access through the `macos` extension:
+Wrap your root widget in `WindowBorder` to get Linux custom shadow and resize
+handles (no-op on other platforms):
 
 ```dart
-// Set vibrancy effect
-await _service.macos.setVibrancy(
-  NSVisualEffectMaterial.sidebar,
-);
-
-// Configure window shadow
-await _service.macos.setHasShadow(hasShadow: false);
-
-// Make window movable by dragging background
-await _service.macos.setMovableByWindowBackground(movable: true);
-
-// Check if window is always on top
-final isOnTop = await _service.macos.isAlwaysOnTop();
+WindowBorder(child: Scaffold(body: ...))
 ```
 
-#### Windows-Specific Features
+## Platform-specific features
 
-Access through the `windows` extension:
-
-```dart
-// Enable Mica effect (Windows 11)
-await _service.windows.setSystemBackdrop(
-  DWMSystemBackdropType.mainWindow, // Mica effect
-);
-
-// Set window corner preference
-await _service.windows.setCornerPreference(
-  WindowCornerPreference.round,
-);
-
-// Set custom border color
-await _service.windows.setBorderColor(Colors.blue);
-
-// Enable dark mode
-await _service.windows.setDarkMode(enabled: true);
-```
-
-#### Linux-Specific Features
-
-Access through the `linux` extension:
+Platform-specific methods live on `DecoratedWindowMacOS`, `DecoratedWindowWin32`,
+and `DecoratedWindowLinux`. Access them by downcasting:
 
 ```dart
-// Check display server type
-final isWayland = await _service.linux.isWayland();
-final isX11 = await _service.linux.isX11();
+final window = DecoratedWindow.forController(controller);
 
-// Note: Some features may not work on Wayland
-if (isX11) {
-  // X11-specific operations work reliably
-  await _service.setAlwaysOnTop(alwaysOnTop: true);
+if (Platform.isMacOS) {
+  (window as DecoratedWindowMacOS?)
+      ?.setVibrancy(NSVisualEffectMaterial.sidebar);
+}
+if (Platform.isWindows) {
+  (window as DecoratedWindowWin32?)
+      ?.setSystemBackdrop(DWMSystemBackdropType.mainWindow);
 }
 ```
 
-## API Reference
+Shared methods available on all platforms (via the base class):
 
-### WindowDecorationService
+- `center()`
+- `setBackgroundColor(Color)`
+- `setOpacity(double)`
+- `setAlwaysOnTop({required bool alwaysOnTop})`
+- `setSkipTaskbar({required bool skip})`
+- `setVisible({required bool visible})` / `show()` / `hide()`
 
-#### Position & Size
-```dart
-Future<void> center()
-Future<WindowBounds> getBounds()
-Future<void> setBounds(WindowBounds bounds)
-```
+For fullscreen, maximize, minimize, size, and constraints, use
+`RegularWindowController` directly.
 
-#### Appearance
-```dart
-Future<void> setBackgroundColor(Color color)
-Future<void> setOpacity(double opacity)
-```
+## Required native setup
 
-#### Behavior
-```dart
-Future<void> setAlwaysOnTop({required bool alwaysOnTop})
-Future<void> setSkipTaskbar({required bool skip})
-Future<void> setFullScreen({required bool fullScreen})
-Future<void> setTitleBarStyle(TitleBarStyle style)
-Future<void> setVisible({required bool visible})
-Future<void> show()  // Convenience method for setVisible(visible: true)
-Future<void> hide()  // Convenience method for setVisible(visible: false)
-```
+To use `window_decoration` with Flutter's multi-window API, configure the
+macOS `AppDelegate` to create the `FlutterEngine` manually so that multi-view
+can be enabled from Dart later.
 
-### WindowDecorationConfig
+`macos/Runner/AppDelegate.swift`:
 
-```dart
-WindowDecorationConfig({
-  bool centered = false,
-  bool alwaysOnTop = false,
-  bool skipTaskbar = false,
-  bool frameless = false,
-  bool visible = true,
-  Color? backgroundColor,
-  double? opacity,
-  TitleBarStyle titleBarStyle = TitleBarStyle.normal,
-  List<WindowEffect> effects = const [],
-})
-```
-
-### TitleBarStyle
-
-```dart
-enum TitleBarStyle {
-  normal,      // Default native title bar
-  hidden,      // Completely hidden
-  transparent, // Transparent with full-size content
-  unified,     // Unified toolbar appearance (macOS)
-}
-```
-
-### NSVisualEffectMaterial (macOS)
-
-```dart
-enum NSVisualEffectMaterial {
-  titlebar,
-  selection,
-  menu,
-  popover,
-  sidebar,
-  headerView,
-  sheet,
-  windowBackground,
-  hudWindow,
-  fullScreenUI,
-  toolTip,
-  contentBackground,
-  underWindowBackground,
-  underPageBackground,
-}
-```
-
-### DWMSystemBackdropType (Windows)
-
-```dart
-enum DWMSystemBackdropType {
-  auto,              // Automatically select backdrop
-  none,              // No backdrop effect
-  mainWindow,        // Mica effect (Windows 11)
-  transientWindow,   // Acrylic effect
-  tabbedWindow,      // Tabbed window backdrop
-}
-```
-
-### WindowCornerPreference (Windows)
-
-```dart
-enum WindowCornerPreference {
-  defaultCorners,    // Default system behavior
-  doNotRound,        // Square corners
-  round,             // Rounded corners
-  roundSmall,        // Small rounded corners
-}
-```
-
-## Requirements
-
-- **Dart SDK**: >=3.10.0 <4.0.0
-- **Flutter SDK**: >=3.38.1 (for multi-window API)
-- **macOS**: macOS 10.14+ (for NSVisualEffectView)
-- **Windows**: Windows 10 1803+ (for basic features), Windows 11 (for Mica effect)
-- **Linux**:
-  - GTK 3.0+
-  - X11 for full feature support
-  - Wayland with limited positioning support
-
-## Architecture
-
-This package uses a **Dart workspace** with a federated plugin architecture:
-
-### Workspace Structure
-
-```
-window_decoration/
-├── pubspec.yaml                    # Workspace root
-├── analysis.yaml                   # Shared analysis configuration
-├── packages/
-│   ├── window_decoration/          # Main package with public API
-│   ├── window_decoration_platform_interface/  # Platform contract
-│   ├── window_decoration_macos/    # macOS implementation (AppKit FFI)
-│   ├── window_decoration_windows/  # Windows implementation (Win32 FFI)
-│   └── window_decoration_linux/    # Linux implementation (GTK3/X11 FFI)
-└── example/                        # Example application
-```
-
-### Package Responsibilities
-
-- **window_decoration**: Main package with public API
-- **window_decoration_platform_interface**: Platform contract and base classes
-- **window_decoration_macos**: macOS implementation via Objective-C FFI
-- **window_decoration_windows**: Windows implementation via Win32 FFI
-- **window_decoration_linux**: Linux implementation via GTK3/X11 FFI
-
-### Key Design Decisions
-
-1. **Pure FFI**: Uses `dart:ffi` instead of platform channels for maximum performance
-2. **No Custom Window Types**: Integrates with Flutter's `RegularWindowController` via `windowHandle`
-3. **Platform-Specific Extensions**: Each platform can expose unique features
-4. **Declarative & Programmatic**: Supports both widget-based and service-based APIs
-
-## Examples
-
-### Interactive Example App
-
-The repository includes a comprehensive example app demonstrating all features:
-
-**To run the example:**
-```bash
-cd example
-flutter run -d macos  # or windows, linux
-```
-
-The example app provides an interactive UI to test all window decoration features including:
-- Window positioning and centering
-- Opacity control
-- Always-on-top behavior
-- Title bar styles
-- Platform-specific effects (vibrancy on macOS, DWM effects on Windows)
-
-### Required Native Setup
-
-To use `window_decoration` with Flutter's `RegularWindowController`, you need to configure your macOS AppDelegate:
-
-**macos/Runner/AppDelegate.swift:**
 ```swift
 import Cocoa
 import FlutterMacOS
@@ -438,8 +162,6 @@ class AppDelegate: FlutterAppDelegate {
   var engine: FlutterEngine?
 
   override func applicationDidFinishLaunching(_ notification: Notification) {
-    // CRITICAL: Create engine manually without creating view controllers
-    // This allows multi-view to be enabled later from Dart
     engine = FlutterEngine(name: "main", project: nil)
     engine?.run(withEntrypoint: nil)
     RegisterGeneratedPlugins(registry: engine!)
@@ -455,119 +177,51 @@ class AppDelegate: FlutterAppDelegate {
 }
 ```
 
-**Why this is needed:** Flutter's multi-view API requires that multi-view be enabled BEFORE any view controllers are created. The default FlutterAppDelegate creates a view controller automatically, which prevents multi-view from being enabled. By manually creating the FlutterEngine without view controllers, we allow `RegularWindowController` to enable multi-view when it's created from Dart.
+This is needed because the default `FlutterAppDelegate` creates a view
+controller automatically, and multi-view must be enabled BEFORE any view
+controller is created.
 
-## Testing
+## Delegates
 
-Due to Flutter's experimental multi-window API initialization requirements, automated integration tests are not compatible with this package.
+For lifecycle / resize / fullscreen / state hooks, register a delegate mixin
+on the platform controller:
 
-### Manual Testing
+```dart
+class _MyPage extends State<MyPage> with WindowDelegateMacOS {
+  @override
+  void initState() {
+    super.initState();
+    (controller as WindowControllerMacOS).addDelegate(this);
+  }
 
-The package has been thoroughly tested on macOS (Apple Silicon). Testing on Windows and Linux is pending.
+  @override
+  Size? windowWillResizeToSize(Size newSize) {
+    // Enforce an aspect ratio, etc.
+    return null;
+  }
 
-**To test the package:**
+  @override
+  void windowWillEnterFullScreen() {}
+}
+```
 
-1. **Run the example app** (Recommended):
-   ```bash
-   cd example
-   flutter run -d macos  # or windows, linux
-   ```
-
-2. **In your own app**:
-   ```dart
-   final service = WindowDecorationService(controller);
-   await service.center();
-   await service.setTitleBarStyle(TitleBarStyle.transparent);
-   ```
-
-### Platform Testing Status
-
-- ✅ **macOS**: Fully tested on Apple Silicon (arm64)
-- ✅ **Windows**: Implementation complete (Windows 10/11)
-- ✅ **Linux**: Implementation complete (GTK3/X11/Wayland)
+Equivalent mixins exist for Windows (`WindowDelegateWin32` +
+`Win32MessageHandler`) and Linux (`WindowDelegateLinux`, with
+`WindowControllerLinuxExtension.getWindowState()`).
 
 ## Limitations
 
-### macOS
-- `setSkipTaskbar()` affects the entire application's dock icon, not individual windows
-- Some features require macOS 10.14+ (Mojave)
-- NSRect struct handling uses platform-specific approach (arm64 vs x86_64)
-
-### Windows
-- DWM effects require Windows 10 1803+ or later
-- Mica effect requires Windows 11
-- Title bar customization is limited compared to macOS
-- `setBackgroundColor()` sets caption color, not full window background
-
-### Linux
-- **Wayland limitations** (compositor security restrictions):
-  - Window positioning (`setBounds()`, `center()`) may not work
-  - Always-on-top (`setAlwaysOnTop()`) may not work
-  - Feature availability depends on compositor
-- **X11**: Full feature support
-- Background color customization requires CSS providers (not yet implemented)
-- Title bar transparency requires custom compositing
-
-## Development
-
-This repository uses a Dart workspace for managing multiple packages. To get started:
-
-```bash
-# Clone the repository
-git clone https://github.com/rkishan516/window_decoration.git
-cd window_decoration
-
-# Install dependencies for all packages in the workspace
-flutter pub get
-
-# Run the example app
-cd example
-flutter run -d macos  # or windows, linux
-```
-
-### Working with the Workspace
-
-The workspace configuration allows all packages to be developed together:
-
-- Dependencies are resolved at the workspace level
-- All packages share the same `analysis.yaml` configuration
-- Changes to platform packages are immediately reflected in the main package
-- Run `flutter pub get` from the root to update all packages
-
-### Running Tests
-
-```bash
-# From the root directory
-flutter test packages/window_decoration
-flutter test packages/window_decoration_platform_interface
-
-# Platform-specific tests
-flutter test packages/window_decoration_macos
-flutter test packages/window_decoration_windows
-flutter test packages/window_decoration_linux
-```
-
-## Contributing
-
-This package was built as part of a Flutter desktop window customization initiative. Contributions and improvements are welcome!
-
-### Known Issues & Future Enhancements
-
-- **macOS**: All core features implemented and tested on Apple Silicon
-- **Windows**: Additional testing on various Windows 10/11 configurations
-- **Linux**:
-  - Implement CSS provider for custom background colors
-  - Enhanced Wayland compositor compatibility testing
-  - Additional X11 window type hints
-- **All platforms**: Comprehensive automated test suites
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details
+- The package targets the experimental Flutter multi-window API. Breaking
+  changes in Flutter's internal `_window.dart` imports may require updates.
+- Integration testing with `integration_test` is currently not compatible with
+  this setup; use the example app for manual verification.
+- Linux Wayland imposes compositor-level restrictions on keep-above,
+  positioning, and window-state queries.
+- Mica/Acrylic effects and rounded corners require Windows 11.
 
 ## Credits
 
-Built using Flutter's experimental multi-window API and inspired by:
-- [bitsdojo_window](https://pub.dev/packages/bitsdojo_window)
-- [window_manager](https://pub.dev/packages/window_manager)
-- [nativeapi-flutter](https://github.com/libnativeapi/nativeapi-flutter)
+- Based on architectural patterns from
+  [knopp/window_toolbox](https://github.com/knopp/window_toolbox).
+- Earlier federated implementation drew on `bitsdojo_window` and
+  `window_manager`.

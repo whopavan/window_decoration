@@ -1,12 +1,11 @@
 name: window_decoration_example
-description: Example app demonstrating window_decoration package
-version: 0.1.0
+description: Example app demonstrating the window_decoration package.
+version: 0.2.0
 publish_to: none
-resolution: workspace
 
 environment:
-  sdk: '>=3.10.0 <4.0.0'
-  flutter: '>=3.38.1'
+  sdk: ^3.12.0
+  flutter: ">=3.42.0"
 
 dependencies:
   flutter:
@@ -15,9 +14,8 @@ dependencies:
     path: ../packages/window_decoration
 
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
-    sdk: flutter
-  integration_test:
     sdk: flutter
 
 flutter:
