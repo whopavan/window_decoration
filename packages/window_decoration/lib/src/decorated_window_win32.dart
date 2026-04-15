@@ -195,8 +195,6 @@ class DecoratedWindowWin32 extends DecoratedWindow {
       case WM_DESTROY:
         onClose();
         break;
-      case WM_ERASEBKGND:
-        return 0;
       case WM_SIZE:
         if (wParam == SIZE_MINIMIZED) return 0;
         break;
