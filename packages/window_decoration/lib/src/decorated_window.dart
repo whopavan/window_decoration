@@ -99,6 +99,19 @@ abstract class DecoratedWindow {
   /// Set whether the window is visible.
   Future<void> setVisible({required bool visible});
 
+  /// Mark the window as non-activating.
+  ///
+  /// When enabled, the window does not steal foreground focus when it is
+  /// shown, positioned, clicked, or brought topmost. This is required for
+  /// Steam-style toast notifications: without it, exclusive-fullscreen
+  /// D3D games (e.g. CS2) lose the foreground and minimize every time a
+  /// notification appears.
+  ///
+  /// Default implementation is a no-op; platforms that need the distinction
+  /// override this (Windows uses `WS_EX_NOACTIVATE` + `SW_SHOWNOACTIVATE`
+  /// + `MA_NOACTIVATE`).
+  Future<void> setNoActivate({required bool enabled}) async {}
+
   /// Convenience wrapper for [setVisible] with `visible: true`.
   Future<void> show() => setVisible(visible: true);
 

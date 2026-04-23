@@ -13,6 +13,10 @@ import 'dart:ffi' hide Size;
 
 import 'win32_util.dart';
 
+// `MA_NOACTIVATE` is not exported by the win32 package (as of 6.0.1).
+// See https://learn.microsoft.com/windows/win32/inputdev/wm-mouseactivate
+const int _kMaNoActivate = 3;
+
 class _SubclassState {
   bool needRearmMouseTracker = false;
 }
@@ -184,6 +188,7 @@ class DecoratedWindowWin32 extends DecoratedWindow {
   }
 
   bool _trackingMouseLeave = false;
+  bool _noActivate = false;
 
   int? handleWindowsMessage(
     HWND windowHandle,
@@ -194,6 +199,13 @@ class DecoratedWindowWin32 extends DecoratedWindow {
     switch (message) {
       case WM_DESTROY:
         onClose();
+        break;
+      case WM_MOUSEACTIVATE:
+        if (_noActivate) {
+          // Click on the window does not activate it — keeps the foreground
+          // (e.g. a fullscreen game) from losing focus.
+          return _kMaNoActivate;
+        }
         break;
       case WM_SIZE:
         if (wParam == SIZE_MINIMIZED) return 0;
@@ -410,7 +422,7 @@ class DecoratedWindowWin32 extends DecoratedWindow {
       position.dy.round(),
       0,
       0,
-      SWP_NOSIZE | SWP_NOZORDER,
+      SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
     );
   }
 
@@ -472,13 +484,47 @@ class DecoratedWindowWin32 extends DecoratedWindow {
       0,
       0,
       0,
-      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED |
+          SWP_NOACTIVATE,
     );
   }
 
   @override
   Future<void> setVisible({required bool visible}) async {
-    ShowWindow(_hwnd, visible ? SW_SHOW : SW_HIDE);
+    if (!visible) {
+      ShowWindow(_hwnd, SW_HIDE);
+      return;
+    }
+    // When non-activating, use SW_SHOWNOACTIVATE so showing the window
+    // does not steal foreground focus from another app (e.g. a
+    // fullscreen game).
+    ShowWindow(_hwnd, _noActivate ? SW_SHOWNOACTIVATE : SW_SHOW);
+  }
+
+  @override
+  Future<void> setNoActivate({required bool enabled}) async {
+    _noActivate = enabled;
+
+    final currentStyle = GetWindowLongPtr(_hwnd, GWL_EXSTYLE).value;
+    final newStyle = enabled
+        ? currentStyle | WS_EX_NOACTIVATE
+        : currentStyle & ~WS_EX_NOACTIVATE;
+    if (newStyle != currentStyle) {
+      SetWindowLongPtr(_hwnd, GWL_EXSTYLE, newStyle);
+      SetWindowPos(
+        _hwnd,
+        null,
+        0,
+        0,
+        0,
+        0,
+        SWP_NOMOVE |
+            SWP_NOSIZE |
+            SWP_NOZORDER |
+            SWP_FRAMECHANGED |
+            SWP_NOACTIVATE,
+      );
+    }
   }
 
   //
