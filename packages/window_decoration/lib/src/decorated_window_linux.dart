@@ -42,6 +42,11 @@ final _gtkWidgetHide = _gtkLib.lookupFunction<
   void Function(ffi.Pointer<ffi.Void>)
 >('gtk_widget_hide');
 
+final _gtkWindowPresent = _gtkLib.lookupFunction<
+  ffi.Void Function(ffi.Pointer<ffi.Void>),
+  void Function(ffi.Pointer<ffi.Void>)
+>('gtk_window_present');
+
 final _gtkWindowMove = _gtkLib.lookupFunction<
   ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Int32, ffi.Int32),
   void Function(ffi.Pointer<ffi.Void>, int, int)
@@ -253,6 +258,11 @@ class DecoratedWindowLinux extends DecoratedWindow {
     } else {
       _gtkWidgetHide(_window);
     }
+  }
+
+  @override
+  Future<void> bringToForeground() async {
+    _gtkWindowPresent(_window);
   }
 
   //

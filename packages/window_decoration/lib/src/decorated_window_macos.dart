@@ -300,6 +300,13 @@ class DecoratedWindowMacOS extends DecoratedWindow with WindowDelegateMacOS {
     }
   }
 
+  @override
+  Future<void> bringToForeground() async {
+    final nsApp = _msgSend(_cls('NSApplication'), _sel('sharedApplication'));
+    _msgSendVoidBool(nsApp, _sel('activateIgnoringOtherApps:'), true);
+    _msgSendVoidId(_nsWindow, _sel('makeKeyAndOrderFront:'), nullptr);
+  }
+
   //
   // macOS-only feature methods.
   //

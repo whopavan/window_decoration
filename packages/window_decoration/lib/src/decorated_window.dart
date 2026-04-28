@@ -117,6 +117,14 @@ abstract class DecoratedWindow {
 
   /// Convenience wrapper for [setVisible] with `visible: false`.
   Future<void> hide() => setVisible(visible: false);
+
+  /// Bring the window to the foreground and give it focus.
+  ///
+  /// Restores the window if it is minimized. On platforms that distinguish
+  /// app-level activation from window-level ordering (macOS), the owning
+  /// application is also activated. No-ops when the window is configured as
+  /// non-activating via [setNoActivate].
+  Future<void> bringToForeground();
 }
 
 enum WindowEdge {

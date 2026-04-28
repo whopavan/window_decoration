@@ -502,6 +502,36 @@ class DecoratedWindowWin32 extends DecoratedWindow {
   }
 
   @override
+  Future<void> bringToForeground() async {
+    if (_noActivate) return;
+    if (IsIconic(_hwnd)) {
+      ShowWindow(_hwnd, SW_RESTORE);
+    }
+    // Windows will only honor SetForegroundWindow when the calling thread
+    // already owns the foreground (the "foreground lock"). When another
+    // window is on top, attach our input queue to the foreground thread's
+    // so the OS treats us as a peer and lets us steal activation.
+    final foreHwnd = GetForegroundWindow();
+    final foreThread = foreHwnd.isNotNull
+        ? GetWindowThreadProcessId(foreHwnd, nullptr)
+        : 0;
+    final currentThread = GetCurrentThreadId();
+    final attach = foreThread != 0 && foreThread != currentThread;
+    if (attach) {
+      AttachThreadInput(currentThread, foreThread, true);
+    }
+    try {
+      BringWindowToTop(_hwnd);
+      SetForegroundWindow(_hwnd);
+      SetFocus(_hwnd);
+    } finally {
+      if (attach) {
+        AttachThreadInput(currentThread, foreThread, false);
+      }
+    }
+  }
+
+  @override
   Future<void> setNoActivate({required bool enabled}) async {
     _noActivate = enabled;
 
