@@ -17,6 +17,27 @@ import 'win32_util.dart';
 // See https://learn.microsoft.com/windows/win32/inputdev/wm-mouseactivate
 const int _kMaNoActivate = 3;
 
+// DWM attributes such as `DWMWA_CAPTION_COLOR`, `DWMWA_BORDER_COLOR`,
+// `DWMWA_WINDOW_CORNER_PREFERENCE`, and `DWMWA_SYSTEMBACKDROP_TYPE`
+// require Windows 11 (Build 22000+). Calling them on Windows 10 returns
+// `E_INVALIDARG (0x80070057)` and the win32 binding throws.
+int? _cachedWindowsBuild;
+
+int _windowsBuildNumber() {
+  final cached = _cachedWindowsBuild;
+  if (cached != null) return cached;
+  final info = malloc<OSVERSIONINFOEX>();
+  try {
+    info.ref.dwOSVersionInfoSize = sizeOf<OSVERSIONINFOEX>();
+    final ok = RtlGetVersion(info.cast()) == 0;
+    return _cachedWindowsBuild = ok ? info.ref.dwBuildNumber : 0;
+  } finally {
+    malloc.free(info);
+  }
+}
+
+bool get _isWindows11OrLater => _windowsBuildNumber() >= 22000;
+
 class _SubclassState {
   bool needRearmMouseTracker = false;
 }
@@ -428,6 +449,7 @@ class DecoratedWindowWin32 extends DecoratedWindow {
 
   @override
   Future<void> setBackgroundColor(Color color) async {
+    if (!_isWindows11OrLater) return;
     final value = malloc<Uint32>();
     try {
       final r = (color.r * 255.0).round().clamp(0, 255);
@@ -563,6 +585,7 @@ class DecoratedWindowWin32 extends DecoratedWindow {
 
   /// Set the DWM system backdrop type (Windows 11 only).
   Future<void> setSystemBackdrop(DWMSystemBackdropType backdrop) async {
+    if (!_isWindows11OrLater) return;
     final value = malloc<Uint32>();
     try {
       value.value = backdrop.value;
@@ -579,6 +602,7 @@ class DecoratedWindowWin32 extends DecoratedWindow {
 
   /// Set the window corner preference (Windows 11 only).
   Future<void> setCornerPreference(WindowCornerPreference preference) async {
+    if (!_isWindows11OrLater) return;
     final value = malloc<Uint32>();
     try {
       value.value = preference.value;
@@ -595,6 +619,7 @@ class DecoratedWindowWin32 extends DecoratedWindow {
 
   /// Set the window border color (Windows 11 only).
   Future<void> setBorderColor(Color color) async {
+    if (!_isWindows11OrLater) return;
     final value = malloc<Uint32>();
     try {
       final r = (color.r * 255.0).round().clamp(0, 255);
